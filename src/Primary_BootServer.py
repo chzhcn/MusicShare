@@ -89,10 +89,10 @@ class listener():
     def socket_init(self):
         self.s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.s.settimeout(CHECK_TIMEOUT)
-        #try:
-        self.s.bind((CS_Primary_Request_IP,CS_Primary_Request_Port))
-        #except:
-        #    print "Sorry,socket is occupied by another program,pleas close it firstly"
+        try:
+            self.s.bind((CS_Primary_Request_IP,CS_Primary_Request_Port))
+        except:
+            print "Sorry,socket is occupied by another program,pleas close it firstly"
 
         
     def listen(self):
@@ -158,13 +158,13 @@ class Receiver(threading.Thread):
     def socket_init(self,address):
         self.s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.s.settimeout(CHECK_TIMEOUT)
-        #try:
-        print address
-        self.s.bind(address)
-        print "done"
-#        except:
-#            print "Sorry,socket is occupied by another program,pleas close it firstly"
-#            sys.exit()
+        try:
+            print address
+            self.s.bind(address)
+            print "done"
+        except:
+            print "Sorry,socket is occupied by another program,pleas close it firstly"
+            sys.exit()
 
         
     def listen(self):

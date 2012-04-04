@@ -33,13 +33,19 @@ class Client(threading.Thread):
         self.log_open = False
         self.UT = []
         self.s
+        # self.send_socket
+        
         self.music_table = {}
-        
+       
         self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.listening_addr = ('', 0)
+        self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
         self.listening_sock.bind(self.listening_addr)
-        # FIXME: sending listening_addr to server
+        self.listening_addr = self.listening_sock.getsockname()
+        print "in _init_"
+        print self.listening_addr
+        # FIXME: sending listening_addr to server    
         
+
         self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
         
                
@@ -126,7 +132,8 @@ class Client(threading.Thread):
                     if not self.username:
                         print "there is no username, please input again"
                     else:
-                        addr = self.s.getsockname()
+                        # addr = self.s.getsockname()
+                        addr = self.listening_addr;
                         message = ('CHB', addr, self.username)
                         self.s.sendall(str(message))
                         # FIXME: sending listening_addr to server
@@ -172,22 +179,28 @@ class Client(threading.Thread):
                         if xyz[0] == 'UT':
                             self.UT = xyz[1]
                             print "\nreceived message:%s \r" % str(xyz[1])
-                            
+
+                            print "in receiving UT"                            
                                                         
                             # contact other clients except myself
                             for ut_item in xyz[1] :
                                 # FIXME: assume (ut_item[0], ut_item[1]) is the listening address
                                 # add to own music_table
-                                if (ut_item[0], ut_item[1]) == self.listening_addr :
-                                    self.music_table[(ut_item[0], ut_item[1])] = self.music_info
+
+                                key = (ut_item[0], int(ut_item[1]))
+                                if key == self.listening_addr :
+                                    print "comparison is true"
+                                    self.music_table[key] = self.music_info
                                 else :    
-                                    self.music_table[(ut_item[0], ut_item[1])] = Music_Info(ut_item[2])
+                                    self.music_table[key] = Music_Info(ut_item[2])
                                                        
                             print self.music_table
                             
-                            self.multicast_CHB()
-                            
+                                                        
                             print "first time multicast CHB - this line shouldn't be seen twice"
+                            
+                            self.multicast_CHB()
+
                             
                         else:
                             print "\nreceived message:%s \r" % str(xyz[1])
@@ -195,10 +208,14 @@ class Client(threading.Thread):
 
     def send_obj(self, addr, obj):  
         try :
-            self.send_socket.create_connection(addr, 10)    
+            print "before connect"
+            self.send_socket.connect(addr)    
+            print "after connect"
             data = pickle.dumps(obj)
             self.send_socket.send(data); 
-        except :
+        except Exception as inst:
+            print type(inst)
+            print inst
             print "send_obj() exception. addr: %s obj: %s" % (addr, str(obj))
             raise
 
@@ -211,9 +228,13 @@ class Client(threading.Thread):
             print "send_CHB() exception addr %s obj: %s" % (address, str(music_info))
                            
     def multicast_CHB(self):
+        print "multicast_CHB"
         for k, v in self.music_table.iteritems() :
-            if (k, v) != self.listening_addr :
+            print (k, v)
+            if k != self.listening_addr :
                 self.send_CHB(k, v)
+            else :
+                print "comparison is true"
                             
 
             
