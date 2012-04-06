@@ -206,35 +206,7 @@ class Client(threading.Thread):
                             print "\nreceived message:%s \r" % str(xyz[1])
 
 
-    def send_obj(self, addr, obj):  
-        try :
-            print "before connect"
-            self.send_socket.connect(addr)    
-            print "after connect"
-            data = pickle.dumps(obj)
-            self.send_socket.send(data); 
-        except Exception as inst:
-            print type(inst)
-            print inst
-            print "send_obj() exception. addr: %s obj: %s" % (addr, str(obj))
-            raise
 
-            
-
-    def send_CHB(self, address, music_info):
-        try :
-            self.send_obj(address, music_info)  
-        except :
-            print "send_CHB() exception addr %s obj: %s" % (address, str(music_info))
-                           
-    def multicast_CHB(self):
-        print "multicast_CHB"
-        for k, v in self.music_table.iteritems() :
-            print (k, v)
-            if k != self.listening_addr :
-                self.send_CHB(k, v)
-            else :
-                print "comparison is true"
                             
 
             
