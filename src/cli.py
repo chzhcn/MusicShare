@@ -24,7 +24,7 @@ class client(object):
 
 
     def __init__(self):
-        print "in init of client"
+        # print "in init of client"
         
         self.s = None;
         self.send_socket = None;
@@ -125,7 +125,7 @@ class client(object):
             try:
                 data = self.s.recv(1024)
             except:
-                print "server is down in receiving first server discovery reply"
+                # print "server is down in receiving first server discovery reply"
                    
                 # self.thread_stop = True
                 self.connect_server()
@@ -137,13 +137,11 @@ class client(object):
             #print "\nreceived data : %s \r\n " % data
             xyz = ast.literal_eval(data)# change it to tuple
             
-            print "\nreceived message:%s \r" % str(xyz[1])
+            print "\nreceived U.T. from server:%s \r" % str(xyz[1])
             
 
             if xyz[0] == 'UT':
-                # self.UT = xyz[1]
-                    
-                print "in receiving UT"                            
+                        
                 self.music_table_lock.acquire()    
                 self.session_table_lock.acquire()                                      
                 # contact other clients except myself
@@ -156,17 +154,17 @@ class client(object):
                     # self.session_table[key] = Session_Info(ut_item[2])
 
                     if key == self.listening_addr :
-                        print "find self"
+                        # print "find self"
                         self.music_table[key] = self.music_info
                     # else :    
                     #    self.music_table[key] = Music_Info(ut_item[2])
                 
                 self.music_table_lock.release()
                 self.session_table_lock.release()                           
-                print self.music_table
+                # print self.music_table
                 
                                             
-                print "first time multicast CHB - this line shouldn't be seen twice"
+                print "first time multicast discovery message to clients - this line shouldn't be seen twice"
                 
                 self.multicast_CCD()
                 
@@ -181,22 +179,24 @@ class client(object):
             peer_socket.close()
             message = pickle.loads(data);
             
-            print 'receive_client : new message'
+            print 'receive new message of type %s, from client %s' % (message.type, message.sender_listening_addr) 
             # self.dump_table()
             
-            self.session_table_lock.acquire()       
+            self.session_table_lock.acquire()   
+            
+            session_table_entry = {};       
             
             # check logical_clk_time
             if message.sender_listening_addr in self.session_table.keys() and message.logical_clk_time <= self.session_table[message.sender_listening_addr]['logical_clk_time'] :
                 continue
-            
-            self.session_table[message.sender_listening_addr] = {}
-            self.session_table[message.sender_listening_addr]['logical_clk_time'] = message.logical_clk_time
-            
+                    
+            session_table_entry['logical_clk_time'] = message.logical_clk_time            
             # record last_recv_time
-            self.session_table[message.sender_listening_addr]['last_recv_time'] = time.time()
-            self.session_table[message.sender_listening_addr]['username'] = message.username
-            self.session_table[message.sender_listening_addr]['app_start_time'] = message.app_start_time
+            session_table_entry['last_recv_time'] = time.time()
+            session_table_entry['username'] = message.username
+            session_table_entry['app_start_time'] = message.app_start_time
+            
+            self.session_table[message.sender_listening_addr] = session_table_entry
             
             self.session_table_lock.release()       
                 
@@ -220,13 +220,13 @@ class client(object):
                 
                 self.music_table_lock.release()       
                 
-                print "D/HB received"
+                print "client discovery | heartbeat message received"
                 print message.type, message.sender_listening_addr
                 # self.dump_table()
                 
                 if message.type == 'CCD'  :
                     # send hb message back right asway
-                    print 'sending back CCHB'
+                    print 'message received is discovery; sending back a client heartbeat message as reply'
                     self.send_C_Music(message.sender_listening_addr, 'CCHB') 
                 
             elif message.type == 'LIKE' :
@@ -270,14 +270,14 @@ class client(object):
 
                            
     def multicast_C_Music(self, m_type):
-        print "multicast_C"
+        print "multicasting music info to clients"
         self.session_table_lock.acquire()
         for k in self.session_table.keys() :
             # print (k, v)
             if k != self.listening_addr :
                 self.send_C_Music(k, m_type)
-            else :
-                print "comparison is true"   
+            #else :
+            #    print "comparison is true"   
         self.session_table_lock.release() 
                 
                 

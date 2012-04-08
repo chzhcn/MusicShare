@@ -1,0 +1,61 @@
+#
+#  Copyright (C) 2002, 2006-2007  Travis Shirk <travis@pobox.com>
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+%define name eyeD3
+%define version @PACKAGE_VERSION@
+%define maintainer @PACKAGE_BUGREPORT@
+%define release @RPM_RELEASE@
+
+Summary: A python module for processing mp3 files.
+Name: %{name}
+Version:%{version}
+Release: %{release}
+License: GPL
+BuildArch: noarch
+URL: http://eyed3.nicfit.net/
+Group: Development/Libraries
+Source0: %{name}-%{version}.tar.gz
+Packager: %{maintainer}
+BuildRoot: /var/tmp/%{name}-%{version}-buildroot
+
+Requires: python2 >= 2.5
+
+%description
+eyeD3 is a Python module and program for processing ID3 tags.
+Information about mp3 files (i.e bit rate, sample frequency,
+play time, etc.) is also provided.  The formats supported are ID3
+v1.0/v1.1 and v2.3/v2.4.
+
+%prep
+%setup -q
+
+%build
+./configure --prefix=%{_prefix} --mandir=%{_mandir}
+make
+
+%install
+make RPM_BUILD_ROOT=${RPM_BUILD_ROOT} all install
+
+%files
+%defattr(-, root, root, 0755)
+%{_libdir}/python*/site-packages/%{name}
+%doc AUTHORS ChangeLog COPYING INSTALL NEWS README* THANKS TODO
+%{_bindir}/eyeD3
+%{_mandir}/man1/eyeD3.1.gz
+
+%clean
+rm -rf ${RPM_BUILD_ROOT}

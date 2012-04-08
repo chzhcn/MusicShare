@@ -1,0 +1,191 @@
+#
+#  Copyright (C) 2002-2004  Travis Shirk <travis@pobox.com>
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+DIST_NAME=@PACKAGE_TARNAME@-@PACKAGE_VERSION@
+DIST_TAR=${DIST_NAME}.tar
+DIST_GZ=${DIST_TAR}.gz
+DIST_RPM=${DIST_NAME}-@RPM_RELEASE@.noarch.rpm
+DIST_SRPM=${DIST_NAME}-@RPM_RELEASE@.src.rpm
+DIST_WWW=${DIST_NAME}-www.tar.gz
+PYTHON=@PYTHON@
+RPM_DIR=/usr/local/rpm
+EBUILD_VERSION=@EBUILD_VERSION@
+
+ifdef RPM_BUILD_ROOT
+  DESTDIR=${RPM_BUILD_ROOT}
+endif
+ifdef DESTDIR
+  SETUP_ARGS=--root ${DESTDIR}
+endif
+prefix=@prefix@
+exec_prefix:=@exec_prefix@
+bindir:=$(subst //,/,${DESTDIR}/@bindir@)
+datarootdir:=$(subst //,/,${DESTDIR}/@datarootdir@)
+mandir:=$(subst //,/,${DESTDIR}/@mandir@)
+datadir:=$(subst //,/,${DESTDIR}/@datadir@)
+docdir:=$(subst //,/,${DESTDIR}/@datadir@/doc/${DIST_NAME})
+# Redefine these
+prefix:=$(subst //,/,${DESTDIR}/${prefix})
+exec_prefix:=$(subst //,/,${DESTDIR}/${exec_prefix})
+
+.PHONY: all install clean dist-clean maintainer-clean dist changelog \
+        tags TAGS rpm rpm-clean release docs docs-clean \
+        www push-www
+
+all: module docs
+
+module:
+	${PYTHON} setup.py build
+
+install:
+	${PYTHON} setup.py install ${SETUP_ARGS}
+
+	install -m 755 -d ${bindir}
+	install -m 755 bin/eyeD3 ${bindir}
+
+	install -m 755 -d ${docdir}
+	install -m 644 README ${docdir}
+	install -m 644 AUTHORS ${docdir}
+	install -m 644 COPYING ${docdir}
+	gzip -f -9 ${docdir}/COPYING
+	install -m 644 ChangeLog ${docdir}
+	gzip -f -9 ${docdir}/ChangeLog
+
+	install -m 755 -d ${mandir}/man1
+	install -m 644 doc/eyeD3.1 ${mandir}/man1
+	gzip -f -9 ${mandir}/man1/eyeD3.1
+
+	@#
+	@# NOTE:  When adding new files, the eyeD3.spec.in file and
+	@# the uninstall target must be updated as well.
+	@#
+
+clean:
+	-rm -rf build
+	find . -name \*.pyc -exec rm '{}' \;
+
+dist-clean: clean
+	-rm -rf autom4te*.cache ${DIST_NAME} ${DIST_GZ} ${DIST_WWW} ${DIST_RPM} ${DIST_SRPM} ${DIST_WWW}
+	-rm setup.py
+	-rm doc/eyeD3.1.gz
+	-rm -f config.* *.bak
+	-rm -rf src/config.h src/eyeD3/__init__.py
+	-find . -name \*.pyc -exec rm '{}' \;
+	-rm Makefile
+
+maintainer-clean: docs-clean
+	-rm -f configure src/config.h.in
+	-rm etc/eyeD3.spec
+	-rm doc/eyeD3.1
+	-rm README.t2t
+	${MAKE} dist-clean
+
+dist: docs dist-clean
+	mkdir ${DIST_NAME}
+	cp ChangeLog AUTHORS COPYING README README.html TODO NEWS\
+	   INSTALL ${DIST_NAME}
+	cp acsite.m4 configure setup.py.in Makefile.in ${DIST_NAME}
+
+	mkdir ${DIST_NAME}/etc
+	cp etc/eyeD3.spec.in ${DIST_NAME}/etc
+	cp etc/gentoo/eyeD3-${EBUILD_VERSION}.ebuild ${DIST_NAME}/etc
+	mkdir ${DIST_NAME}/src
+	cp -r src/eyeD3 ${DIST_NAME}/src
+	mkdir ${DIST_NAME}/bin
+	cp bin/eyeD3 ${DIST_NAME}/bin
+	mkdir ${DIST_NAME}/doc
+	cp doc/eyeD3.1.in ${DIST_NAME}/doc
+
+	find ${DIST_NAME} -type d -name .svn -print | xargs rm -rf
+	find ${DIST_NAME} -type d -name ui -print | xargs rm -rf
+	tar cf ${DIST_TAR} ${DIST_NAME}
+	gzip ${DIST_TAR}
+	rm -rf ${DIST_NAME}
+	./autogen.sh
+
+# XXX: rpmbuild is failing, but I stopped caring about RPMs along time ago,
+#      leaving it up to maintainers
+#release: dist rpm www sloccount
+release: dist www sloccount
+	# Re-bootstap to undo dist-clean
+	./autogen.sh > /dev/null 2>&1
+
+
+rpm: rpm-clean
+	cp etc/eyeD3.spec ${RPM_DIR}/SPECS
+	cp ${DIST_GZ} ${RPM_DIR}/SOURCES
+	rpmbuild -ba ${RPM_DIR}/SPECS/eyeD3.spec
+	cp ${RPM_DIR}/RPMS/noarch/${DIST_RPM} .
+	cp ${RPM_DIR}/SRPMS/${DIST_SRPM} .
+
+rpm-clean:
+	-rm ${RPM_DIR}/SPECS/eyeD3.spec
+	-rm ${RPM_DIR}/SOURCES/${DIST_GZ}
+	-rm -rf ${RPM_DIR}/BUILD/${DIST_NAME}
+	-rm ${RPM_DIR}/RPMS/noarch/${DIST_RPM}
+	-rm ${RPM_DIR}/SRPMS/${DIST_SRPM}
+   
+changelog:
+	svn2cl.sh -i --authors=.changelog_authors
+	   
+tags TAGS: 
+	@if test -f tags; then \
+	   rm tags; \
+        fi
+	@ctags -R --exclude='tmp/*' --exclude='build/*'
+
+docs:
+	if test -f README.t2t; then\
+	   ${MAKE} README;\
+	   ${MAKE} README.html;\
+	fi
+
+README: README.t2t
+	txt2tags -t txt --stdout README.t2t >| README
+
+README.html: README.t2t
+	txt2tags -t html --stdout README.t2t >| README.html
+
+docs-clean:
+	-rm README
+	-rm README.html
+
+patch-clean:
+	find . -name \*.rej | xargs rm
+	find . -name \*.orig | xargs rm
+
+www:
+	-rm -rf ./www
+	-mkdir -p www/eyeD3/releases
+	-mkdir www/eyeD3/releases/gentoo
+	cp README.html ChangeLog COPYING NEWS TODO www/eyeD3
+	cd www/eyeD3 && ln -s README.html index.html
+	cp ${DIST_GZ} www/eyeD3/releases
+	cp etc/gentoo/eyeD3-${EBUILD_VERSION}.ebuild www/eyeD3/releases/gentoo
+	#-mkdir www/eyeD3/releases/rpm
+	#cp ${DIST_RPM} www/eyeD3/releases/rpm
+	#cp ${DIST_SRPM} www/eyeD3/releases/rpm
+	tar czvf ${DIST_WWW} www
+	rm -rf www
+
+push-www:
+	scp ${DIST_WWW} nicfit:.
+	ssh nicfit 'tar xzvf ${DIST_WWW}'
+
+sloccount:
+	sloccount ./src ./bin
+	sloccount --cached --details ./src ./bin

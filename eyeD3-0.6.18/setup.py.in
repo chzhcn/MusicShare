@@ -1,0 +1,18 @@
+from distutils.core import setup;
+setup(
+  name="eyeD3",
+  url="http://eyed3.nicfit.net/",
+  description="Python ID3 and mp3 Tools",
+  author="Travis Shirk",
+  author_email="travis@pobox.com",
+  version="@PACKAGE_VERSION@",
+  package_dir={'eyeD3': 'src/eyeD3'},
+  packages=["eyeD3"],
+  long_description="""
+eyeD3 is a Python module and program for processing ID3 tags.
+Information about mp3 files (i.e bit rate, sample frequency,
+play time, etc.) is also provided.  The formats supported are ID3
+v1.0/v1.1 and v2.3/v2.4.
+  """
+)
+
