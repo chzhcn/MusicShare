@@ -33,8 +33,12 @@ class client(object):
         self.username = None;        
         self.app_start_time = time.time()
         self.logical_clk_time = 0;
+
+        self.music_counter = [0, ];
         
-        self.music_info = Music_Info()
+        # print self.music_counter
+        self.music_info = Music_Info(self.music_counter)
+        # print self.music_counter
         self.music_table = {}
         self.session_table = {}
         
@@ -172,8 +176,7 @@ class client(object):
         while True :
             peer_socket, peer_address = self.listening_sock.accept()
             peer_socket.settimeout(10)
-        
-            
+                    
             data = peer_socket.recv(8192)
             
             peer_socket.close()
@@ -188,6 +191,7 @@ class client(object):
             
             # check logical_clk_time
             if message.sender_listening_addr in self.session_table.keys() and message.logical_clk_time <= self.session_table[message.sender_listening_addr]['logical_clk_time'] :
+                self.session_table_lock.release()
                 continue
                     
             session_table_entry['logical_clk_time'] = message.logical_clk_time            
@@ -222,7 +226,7 @@ class client(object):
                 
                 print "client discovery | heartbeat message received"
                 print message.type, message.sender_listening_addr
-                # self.dump_table()
+                self.dump_table()
                 
                 if message.type == 'CCD'  :
                     # send hb message back right asway
@@ -235,9 +239,11 @@ class client(object):
             
         
     def dump_table(self):
-        print 'dump tables'
+        print 'dump tables2'
+        # for mi in self.music_table.values() :
+        #     print mi.song_dict
         print self.music_table
-        print self.session_table
+        # print self.session_table
  
     def send_obj(self, addr, obj):  
         try :
