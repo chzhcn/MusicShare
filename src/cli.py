@@ -14,6 +14,7 @@ import select;
 
 from client_info import Music_Info
 from Client_Message import Client_Music_Message
+from Client_Message import Client_Like_Message
 
 #Primary Server
 CS_Primary_Request_IP = '127.0.0.1'; CS_Primary_Request_Port = 12345;
@@ -61,11 +62,11 @@ class client(object):
         self.thread_client_HB = threading.Thread(target=self.period_CCHB)
         self.thread_client_HB.start()
 
-        self.thread_server_HB = threading.Thread(target=self.send_hb)
-        self.thread_server_HB.start()
+        # self.thread_server_HB = threading.Thread(target=self.send_hb)
+        # self.thread_server_HB.start()
         
-        self.thread_client_DL = threading.Thread(target=self.detectLost)
-        self.thread_client_DL.start()
+        # self.thread_client_DL = threading.Thread(target=self.detectLost)
+        # self.thread_client_DL.start()
         
         self.thread_client_liveness = threading.Thread(target=self.client_liveness_check)
         self.thread_client_liveness.start()
@@ -179,42 +180,50 @@ class client(object):
             self.init_username_error()
             
         infds_c,outfds_c,errfds_c = select.select([self.s,],[],[])
-        if len(infds_c)!= 0:    
+        data=''
+        if len(infds_c)!= 0:
+            print '4'
             try:
                 data=self.s.recv(8192)
-            except:
+            except Exception as inst :
                 print "receive from server error"
+                print type(inst)
+                print inst
                 self.init_username_error()
                     
-        if len(data) != 0:
-            xyz=ast.literal_eval(data)# change it to tuple
-            if xyz[0] == 'UT':
-                self.session_table_lock.acquire()                                      
-                self.music_table_lock.acquire()    
-                 # contact other clients except myself
-                for ut_item in xyz[1] :
-                    key = (ut_item[0], int(ut_item[1]))
+            if len(data) != 0:
+                print '2'
+                xyz=ast.literal_eval(data)# change it to tuple
+                if xyz[0] == 'UT':
+                    print '1'
+                    self.session_table_lock.acquire()                                      
+                    self.music_table_lock.acquire()    
+                    # contact other clients except myself
+                    for ut_item in xyz[1] :
+                        key = (ut_item[0], int(ut_item[1]))
                     
-                    self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : None}
-                    if key == self.listening_addr :
-                        self.music_table[key] = self.music_info
+                        self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : None}
+                        if key == self.listening_addr :
+                            self.music_table[key] = self.music_info
 
-                self.session_table_lock.release()                                           
-                self.music_table_lock.release()
+                    self.session_table_lock.release()                                           
+                    self.music_table_lock.release()
 
-                print "first time multicast discovery message to clients - this line shouldn't be seen twice"
+                    print "first time multicast discovery message to clients - this line shouldn't be seen twice"
                 
-                self.multicast_CCD()
+                    self.multicast_CCD()
+                else :
+                    print 'something is wrong 1'
             else :
-                print 'something is wrong 1'
-        else :
-            print 'something is wrong 2'
+                print 'something is wrong 3'
 
     def init_username_error(self) :
         print "server is down in sending first server discovery"
-            
-        self.s.shutdown(socket.SHUT_RDWR)
-        self.s.close()
+        try :
+            self.s.shutdown(socket.SHUT_RDWR)
+            self.s.close()
+        except :
+            print 'shut down connection to server error'
             
         self.connect_server()
         self.init_username()
@@ -229,7 +238,7 @@ class client(object):
             peer_socket.close()
             message = pickle.loads(data);
             
-            print 'receive new message of type %s, from client %s' % (message.type, message.sender_listening_addr) 
+            print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
             # self.dump_table()
             
             self.session_table_lock.acquire()   
@@ -272,7 +281,7 @@ class client(object):
                 self.music_table_lock.release()       
                 
                 print "client discovery | heartbeat message received"
-                print message.type, message.sender_listening_addr
+                print message.m_type, message.sender_listening_addr
                 self.dump_table()
                 
                 if message.m_type == 'CCD'  :
@@ -282,7 +291,7 @@ class client(object):
                 
             elif message.m_type == 'LIKE' :
                 if message.receiver_app_start_time == self.app_start_time :
-                    self.music_info.song_dict[message.song_seq_no] = self.music_info.song_dict[message.song_seq_no]+1
+                    self.music_info.song_dict[message.song_seq_no].like = self.music_info.song_dict[message.song_seq_no].like+1
 
 
             
@@ -309,11 +318,11 @@ class client(object):
         self.logical_clk_time += 1
         try :
             self.music_info_lock.acquire()
-            self.send_obj(address, Client_Likef_Message('LIKE', self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, session_table[receive_key]['app_start_time'], song_seq_num))
+            self.send_obj(receiver_key, Client_Like_Message('LIKE', self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.session_table[receiver_key]['app_start_time'], song_seq_num))
         except Exception as inst:
             print type(inst)
             print inst
-            print "send_C_Music() exception addr %s obj: %s" % (address, self.music_info)
+            print "send_like() exception"
         finally:
             self.logical_clk_lock.release()
             self.music_info_lock.release()
@@ -482,7 +491,7 @@ class client(object):
                 
             if command[0] == 'user' :
                 self.username = self.music_info.username = command[1]
-                
+                print self.listening_addr
                 self.init_username()
                 # self.send_SD()
                 
@@ -493,7 +502,7 @@ class client(object):
                 self.open_listener();
             
             elif command[0] == 'like' :
-                self.send_like((command[1], command[2]), command[3])
+                self.send_like((command[1], int(command[2])), int(command[3]))
                 
             elif command[0] == 'q' :
                 sys.exit()
