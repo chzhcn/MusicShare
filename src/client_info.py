@@ -48,7 +48,8 @@ class Song_Info(object) :
         
     def __repr__(self) :
         # print "inside song_info __repr"
-        return str((self.fname, self.title, self.artist, self.album, self.mtype, self.year, self.length))
+        # return str((self.fname, self.title, self.artist, self.album, self.mtype, self.year, self.length))
+        return str((self.title))
 
 
 

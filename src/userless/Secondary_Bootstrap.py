@@ -9,11 +9,11 @@ Created on Mar 25, 2012
 import socket, threading, time, select, sys, os, cPickle, ast
 from threading import Timer  
 # For Client Server
-CS_Primary_Request_IP = '127.0.0.3';CS_Primary_Request_Port = 60000; cs=(CS_Primary_Request_IP, CS_Primary_Request_Port)
+CS_Primary_Request_IP = '127.0.0.1';CS_Primary_Request_Port = 12347; cs=(CS_Primary_Request_IP, CS_Primary_Request_Port)
 # For Local Server 
-SS_Listen_IP = '127.0.0.3';SS_Listen_Port = 60002; ss=(SS_Listen_IP, SS_Listen_Port)
+SS_Listen_IP = '127.0.0.1';SS_Listen_Port = 12348; ss=(SS_Listen_IP, SS_Listen_Port)
 # For Peer Server
-SS_Target_IP = '127.0.0.2';SS_Target_Port = 60001; ss_target=(SS_Target_IP,SS_Target_Port)
+SS_Target_IP = '127.0.0.1';SS_Target_Port = 12346; ss_target=(SS_Target_IP,SS_Target_Port)
 CHECK_PERIOD = 120; CHECK_TIMEOUT = 120;BUFFER_SIZE=1024
 BEAT_PERIOD = 5;MESSAGE='PyHB';judge=1
 MESSAGE="This is message from server"
