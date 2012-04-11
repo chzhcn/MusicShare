@@ -61,13 +61,14 @@ class client(object):
         
         self.thread_client_HB = threading.Thread(target=self.period_CCHB)
         self.thread_client_HB.start()
-
-        # self.thread_server_HB = threading.Thread(target=self.send_hb)
-        # self.thread_server_HB.start()
         
-        # self.thread_client_DL = threading.Thread(target=self.detectLost)
-        # self.thread_client_DL.start()
+        self.hb_event=threading.Event()
+        self.thread_server_HB = threading.Thread(name='block',target=self.send_hb)
+        self.thread_server_HB.start()
         
+        self.thread_client_DL = threading.Thread(target=self.detectLost)
+        self.thread_client_DL.start()
+           
         self.thread_client_liveness = threading.Thread(target=self.client_liveness_check)
         self.thread_client_liveness.start()
 
@@ -126,8 +127,9 @@ class client(object):
                 self.t=time.time()-past
             sys.exit()
 
-    def send_hb(self):      
-            while True: 
+    def send_hb(self):
+        self.hb_event.wait()      
+        while True: 
                 if self.connection_state and self.connection_server=='Primary':          
                             try:
                                 self.hb = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
@@ -155,6 +157,7 @@ class client(object):
                             self.hb.close() 
                             self.received_hb[self.connection_server]=time.time()
                             time.sleep(BEAT_PERIOD)
+                            
     def detectLost(self):
         while True:
             limit = time.time() - CHECK_TIMEOUT
@@ -193,6 +196,11 @@ class client(object):
                     
             if len(data) != 0:
                 print '2'
+                
+                self.s.shutdown(socket.SHUT_RDWR)
+                self.s.close()
+                self.hb_event.set()
+                
                 xyz=ast.literal_eval(data)# change it to tuple
                 if xyz[0] == 'UT':
                     print '1'
@@ -292,8 +300,6 @@ class client(object):
             elif message.m_type == 'LIKE' :
                 if message.receiver_app_start_time == self.app_start_time :
                     self.music_info.song_dict[message.song_seq_no].like = self.music_info.song_dict[message.song_seq_no].like+1
-
-
             
     def dump_table(self):
         print 'dump tables2'
