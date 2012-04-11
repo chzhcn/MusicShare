@@ -62,60 +62,6 @@ class client(object):
         
         self.thread_client_liveness = threading.Thread(target=self.client_liveness_check())
         self.thread_client_liveness.start()
-        
-#    def connect_server(self):
-#        
-#        # re_initialize socket state, so that this function can be reused.
-#        self.connection_sate = False;
-#        
-#        if self.s is socket :
-#            self.s.shutdown(socket.SHUT_RDWR)
-#            self.s.close()
-#        
-#        # Try Primary Server
-#        print "Request Primary Server in next 30s, please wait"
-#        past = time.time();
-#        t = 0
-#        while t < 30:
-#            try: 
-#                    self.s = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port), 10)
-#                    self.connection_state = True
-#                    print "Connected to Primary Server!!!"
-#                    break
-#            except: 
-#                    self.connection_state = False
-#                    
-#            t = time.time() - past
-#
-#        # Try Secondary server
-#        if self.connection_state == False:
-#            print "Primary Server fails,.............." 
-#            print "Request Secondary Server in next 30s,please wait"
-#            past = time.time();
-#            t = 0
-#            while t < 30:
-#                try: 
-#                        self.s = socket.create_connection((CS_Backup_Request_IP, CS_Backup_Request_Port), 10)
-#                        self.connection_state = True
-#                        print "Connected to Secondary Server!!!"
-#                        break
-#                except: 
-#                        self.connection_state = False
-#    
-#                t = time.time() - past
-#                
-#        self.s.settimeout(30)
-#
-#        # Give user feedback and close the program   
-#        if self.connection_state == False:
-#            print "Secondary Server fails,,.............."
-#            time.sleep(1)
-#            print "We are sorry for the inconvenience,the program will close in next 10 seconds"
-#            past = time.time()
-#            t = 0
-#            while t < 10:
-#                t = time.time() - past
-#            sys.exit()   
 
     def connect_server(self):
         # Try Primary Server
@@ -181,7 +127,6 @@ class client(object):
         except :
             print "send to server error"
             self.init_username_error()
-<<<<<<< HEAD
             
         infds_c,outfds_c,errfds_c = select.select([self.s,],[],[])
         if len(infds_c)!= 0:    
@@ -207,21 +152,10 @@ class client(object):
                 self.session_table_lock.release()                                           
                 self.music_table_lock.release()
 
-                                            
                 print "first time multicast discovery message to clients - this line shouldn't be seen twice"
                 
                 self.multicast_CCD()
 
-            if xyz[0]=='UT':
-                self.UT=xyz[1]
-                print "First Received message: %s \r\n" % str(xyz[1])
-            else:
-                print "Error First Received message:%s \r\n" %str(xyz[1])  
-                
-                self.s.shutdown(socket.SHUT_RDWR)    
-                self.s.close()
-                self.username_init2=True
-
     def init_username_error(self) :
         print "server is down in sending first server discovery"
             
@@ -230,166 +164,6 @@ class client(object):
             
         self.connect_server()
         self.init_username()
-
-            
-    # def receive_server(self):
-    #     while True:
-    #         if not self.connection_state:
-    #             continue
-            
-    #         infds_c, outfds_c, errfds_c = select.select([self.s, ], [], [])
-    #         if len(infds_c) == 0:
-    #             continue
-            
-    #         try:
-    #             data = self.s.recv(1024)
-    #         except:
-    #             # print "server is down in receiving first server discovery reply"
-                   
-    #             # self.thread_stop = True
-    #             self.connect_server()
-    #             self.send_SD()
-                
-    #         if len(data) == 0:
-    #             continue
-            
-    #         #print "\nreceived data : %s \r\n " % data
-    #         xyz = ast.literal_eval(data)# change it to tuple
-            
-    #         print "\nreceived U.T. from server:%s \r" % str(xyz[1])
-            
-
-    #         if xyz[0] == 'UT':
-                        
-    #             self.music_table_lock.acquire()    
-    #             self.session_table_lock.acquire()                                      
-    #             # contact other clients except myself
-    #             for ut_item in xyz[1] :
-                    
-        
-    #                 key = (ut_item[0], int(ut_item[1]))
-                    
-    #                 self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : None}
-    #                 # self.session_table[key] = Session_Info(ut_item[2])
-
-    #                 if key == self.listening_addr :
-    #                     # print "find self"
-    #                     self.music_table[key] = self.music_info
-    #                 # else :    
-    #                 #    self.music_table[key] = Music_Info(ut_item[2])
-                
-    #             self.music_table_lock.release()
-    #             self.session_table_lock.release()                           
-    #             # print self.music_table
-                
-=======
-            
-        infds_c,outfds_c,errfds_c = select.select([self.s,],[],[])
-        if len(infds_c)!= 0:    
-            try:
-                data=self.s.recv(8192)
-            except:
-                print "receive from server error"
-                self.init_username_error()
-                    
-        if len(data) != 0:
-            xyz=ast.literal_eval(data)# change it to tuple
-            if xyz[0] == 'UT':
-                self.music_table_lock.acquire()    
-                self.session_table_lock.acquire()                                      
-                 # contact other clients except myself
-                for ut_item in xyz[1] :
-                    key = (ut_item[0], int(ut_item[1]))
-                    
-                    self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : None}
-                    if key == self.listening_addr :
-                        self.music_table[key] = self.music_info
-                
-                self.music_table_lock.release()
-                self.session_table_lock.release()                           
->>>>>>> a058c870157199886142b7b4275231399ec8e046
-                                            
-    #             print "first time multicast discovery message to clients - this line shouldn't be seen twice"
-                
-<<<<<<< HEAD
-=======
-                self.multicast_CCD()
-
-            if xyz[0]=='UT':
-                self.UT=xyz[1]
-                print "First Received message: %s \r\n" % str(xyz[1])
-            else:
-                print "Error First Received message:%s \r\n" %str(xyz[1])  
-                
-                self.s.shutdown(socket.SHUT_RDWR)    
-                self.s.close()
-                self.username_init2=True
-
-    def init_username_error(self) :
-        print "server is down in sending first server discovery"
-            
-        self.s.shutdown(socket.SHUT_RDWR)
-        self.s.close()
-            
-        self.connect_server()
-        self.init_username()
-
-            
-    # def receive_server(self):
-    #     while True:
-    #         if not self.connection_state:
-    #             continue
-            
-    #         infds_c, outfds_c, errfds_c = select.select([self.s, ], [], [])
-    #         if len(infds_c) == 0:
-    #             continue
-            
-    #         try:
-    #             data = self.s.recv(1024)
-    #         except:
-    #             # print "server is down in receiving first server discovery reply"
-                   
-    #             # self.thread_stop = True
-    #             self.connect_server()
-    #             self.send_SD()
-                
-    #         if len(data) == 0:
-    #             continue
-            
-    #         #print "\nreceived data : %s \r\n " % data
-    #         xyz = ast.literal_eval(data)# change it to tuple
-            
-    #         print "\nreceived U.T. from server:%s \r" % str(xyz[1])
-            
-
-    #         if xyz[0] == 'UT':
-                        
-    #             self.music_table_lock.acquire()    
-    #             self.session_table_lock.acquire()                                      
-    #             # contact other clients except myself
-    #             for ut_item in xyz[1] :
-                    
-        
-    #                 key = (ut_item[0], int(ut_item[1]))
-                    
-    #                 self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : None}
-    #                 # self.session_table[key] = Session_Info(ut_item[2])
-
-    #                 if key == self.listening_addr :
-    #                     # print "find self"
-    #                     self.music_table[key] = self.music_info
-    #                 # else :    
-    #                 #    self.music_table[key] = Music_Info(ut_item[2])
-                
-    #             self.music_table_lock.release()
-    #             self.session_table_lock.release()                           
-    #             # print self.music_table
-                
-                                            
-    #             print "first time multicast discovery message to clients - this line shouldn't be seen twice"
-                
->>>>>>> a058c870157199886142b7b4275231399ec8e046
-    #             self.multicast_CCD()
                 
     def receive_client(self):
         while True :
@@ -633,30 +407,6 @@ class client(object):
     #             print "error"
                 
     #          """                       
-                  
-    # def send_SD(self):     
-        
-    #     addr = self.listening_addr;
-    #     message = ('CHB', addr, self.username)
-    #     try :
-    #         self.send_server_String(str(message))
-    #     except :
-    #         print "server is down in sending first server discovery"
-            
-    #         self.s.shutdown(socket.SHUT_RDWR)
-    #         self.s.close()
-            
-    #         self.connect_server()
-    #         self.send_SD()
-            
-    # FIXME : assuming long-live connections to servers    
-    # def send_server_String(self, message):
-    #     try :
-    #         self.s.sendall(message)
-    #     except Exception as inst :
-    #         print type(inst)
-    #         print inst
-    #         raise
         
     def run(self):
         
@@ -683,10 +433,6 @@ class client(object):
                 
             else :
                 print "no match"
-
-
-
-
 
 def main() :
     c = client();
