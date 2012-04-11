@@ -60,6 +60,9 @@ class client(object):
         # self.thread_server_HB = threading.Thread(target=self.send_HB)
         # self.thread_server_HB.start()
         
+        self.thread_client_liveness = threading.Thread(target=self.client_liveness_check())
+        self.thread_client_liveness.start()
+        
 #    def connect_server(self):
 #        
 #        # re_initialize socket state, so that this function can be reused.
@@ -178,6 +181,7 @@ class client(object):
         except :
             print "send to server error"
             self.init_username_error()
+<<<<<<< HEAD
             
         infds_c,outfds_c,errfds_c = select.select([self.s,],[],[])
         if len(infds_c)!= 0:    
@@ -278,9 +282,113 @@ class client(object):
     #             self.session_table_lock.release()                           
     #             # print self.music_table
                 
+=======
+            
+        infds_c,outfds_c,errfds_c = select.select([self.s,],[],[])
+        if len(infds_c)!= 0:    
+            try:
+                data=self.s.recv(8192)
+            except:
+                print "receive from server error"
+                self.init_username_error()
+                    
+        if len(data) != 0:
+            xyz=ast.literal_eval(data)# change it to tuple
+            if xyz[0] == 'UT':
+                self.music_table_lock.acquire()    
+                self.session_table_lock.acquire()                                      
+                 # contact other clients except myself
+                for ut_item in xyz[1] :
+                    key = (ut_item[0], int(ut_item[1]))
+                    
+                    self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : None}
+                    if key == self.listening_addr :
+                        self.music_table[key] = self.music_info
+                
+                self.music_table_lock.release()
+                self.session_table_lock.release()                           
+>>>>>>> a058c870157199886142b7b4275231399ec8e046
                                             
     #             print "first time multicast discovery message to clients - this line shouldn't be seen twice"
                 
+<<<<<<< HEAD
+=======
+                self.multicast_CCD()
+
+            if xyz[0]=='UT':
+                self.UT=xyz[1]
+                print "First Received message: %s \r\n" % str(xyz[1])
+            else:
+                print "Error First Received message:%s \r\n" %str(xyz[1])  
+                
+                self.s.shutdown(socket.SHUT_RDWR)    
+                self.s.close()
+                self.username_init2=True
+
+    def init_username_error(self) :
+        print "server is down in sending first server discovery"
+            
+        self.s.shutdown(socket.SHUT_RDWR)
+        self.s.close()
+            
+        self.connect_server()
+        self.init_username()
+
+            
+    # def receive_server(self):
+    #     while True:
+    #         if not self.connection_state:
+    #             continue
+            
+    #         infds_c, outfds_c, errfds_c = select.select([self.s, ], [], [])
+    #         if len(infds_c) == 0:
+    #             continue
+            
+    #         try:
+    #             data = self.s.recv(1024)
+    #         except:
+    #             # print "server is down in receiving first server discovery reply"
+                   
+    #             # self.thread_stop = True
+    #             self.connect_server()
+    #             self.send_SD()
+                
+    #         if len(data) == 0:
+    #             continue
+            
+    #         #print "\nreceived data : %s \r\n " % data
+    #         xyz = ast.literal_eval(data)# change it to tuple
+            
+    #         print "\nreceived U.T. from server:%s \r" % str(xyz[1])
+            
+
+    #         if xyz[0] == 'UT':
+                        
+    #             self.music_table_lock.acquire()    
+    #             self.session_table_lock.acquire()                                      
+    #             # contact other clients except myself
+    #             for ut_item in xyz[1] :
+                    
+        
+    #                 key = (ut_item[0], int(ut_item[1]))
+                    
+    #                 self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : None}
+    #                 # self.session_table[key] = Session_Info(ut_item[2])
+
+    #                 if key == self.listening_addr :
+    #                     # print "find self"
+    #                     self.music_table[key] = self.music_info
+    #                 # else :    
+    #                 #    self.music_table[key] = Music_Info(ut_item[2])
+                
+    #             self.music_table_lock.release()
+    #             self.session_table_lock.release()                           
+    #             # print self.music_table
+                
+                                            
+    #             print "first time multicast discovery message to clients - this line shouldn't be seen twice"
+                
+>>>>>>> a058c870157199886142b7b4275231399ec8e046
     #             self.multicast_CCD()
                 
     def receive_client(self):
@@ -408,6 +516,34 @@ class client(object):
         while True :
             time.sleep(10)
             self.multicast_CCHB()
+            
+    def client_liveness_check(self):
+        liveness_threshold = 20
+        while True:
+            time.sleep(15)
+            #Go through session table to check last_recv_time
+            self.session_table_lock.acquire()
+            
+            for k in self.session_table.keys() :
+                if k != self.listening_addr :
+                    if(time.time() - self.session_table[k]['last_recv_time'] > liveness_threshold):
+                        self.remove_lost_client(k)
+            
+            self.session_table_lock.release()
+    
+    def remove_lost_client(self,key):
+        # Delete client from all the tables
+        self.remove_session_table(key)
+        self.remove_music_table(key)
+        
+    def remove_session_table(self,key):
+        del self.session_table[key]
+
+    def remove_music_table(self, key):
+        
+        self.music_table_lock.acquire()
+        del self.music_table[key]
+        self.music_table_lock.release()
 
     def open_listener(self):
             self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
