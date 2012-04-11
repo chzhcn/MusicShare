@@ -42,8 +42,8 @@ class client(object):
         self.logical_clk_lock = threading.Lock()
         self.music_info_lock = threading.Lock()
 
-        self.username_init1=False
-        self.username_init2=False
+        # self.username_init1=False
+        # self.username_init2=False
         
         self.connect_server()
         self.open_listener()
@@ -60,7 +60,7 @@ class client(object):
         # self.thread_server_HB = threading.Thread(target=self.send_HB)
         # self.thread_server_HB.start()
         
-        self.thread_client_liveness = threading.Thread(target=self.client_liveness_check())
+        self.thread_client_liveness = threading.Thread(target=self.client_liveness_check)
         self.thread_client_liveness.start()
 
     def connect_server(self):
@@ -118,6 +118,8 @@ class client(object):
                 self.t=time.time()-past
             sys.exit()
 
+        # print "leaving from connect_server()"
+
     def init_username(self):
         addr=self.listening_addr;
                 
@@ -155,6 +157,10 @@ class client(object):
                 print "first time multicast discovery message to clients - this line shouldn't be seen twice"
                 
                 self.multicast_CCD()
+            else :
+                print 'something is wrong 1'
+        else :
+            print 'something is wrong 2'
 
     def init_username_error(self) :
         print "server is down in sending first server discovery"
@@ -209,7 +215,7 @@ class client(object):
 #            
 #            message_music_info.last_recv_time = time.time()
          
-            if message.type == 'CCHB' or message.type == 'CCD' :
+            if message.m_type == 'CCHB' or message.m_type == 'CCD' :
                 
                 self.music_table_lock.acquire()
                 
@@ -221,16 +227,17 @@ class client(object):
                 print message.type, message.sender_listening_addr
                 self.dump_table()
                 
-                if message.type == 'CCD'  :
+                if message.m_type == 'CCD'  :
                     # send hb message back right asway
                     print 'message received is discovery; sending back a client heartbeat message as reply'
                     self.send_C_Music(message.sender_listening_addr, 'CCHB') 
                 
-            elif message.type == 'LIKE' :
-                pass
+            elif message.m_type == 'LIKE' :
+                if message.receiver_app_start_time == self.app_start_time :
+                    self.music_info.song_dict[message.song_seq_no] = self.music_info.song_dict[message.song_seq_no]+1
+
+
             
-            
-        
     def dump_table(self):
         print 'dump tables2'
         # for mi in self.music_table.values() :
@@ -249,8 +256,21 @@ class client(object):
             print "send_obj() exception. addr: %s obj: %s" % (addr, str(obj))
             raise
 
+    def send_like(self, receiver_key, song_seq_num):
+        self.logical_clk_lock.acquire()
+        self.logical_clk_time += 1
+        try :
+            self.music_info_lock.acquire()
+            self.send_obj(address, Client_Likef_Message('LIKE', self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, session_table[receive_key]['app_start_time'], song_seq_num))
+        except Exception as inst:
+            print type(inst)
+            print inst
+            print "send_C_Music() exception addr %s obj: %s" % (address, self.music_info)
+        finally:
+            self.logical_clk_lock.release()
+            self.music_info_lock.release()
+    
             
-
     def send_C_Music(self, address, m_type):
         self.logical_clk_lock.acquire()
         self.logical_clk_time += 1
@@ -264,10 +284,7 @@ class client(object):
         finally:
             self.logical_clk_lock.release()
             self.music_info_lock.release()
-            
     
-
-                           
     def multicast_C_Music(self, m_type):
         print "multicasting music info to clients"
         self.session_table_lock.acquire()
@@ -290,20 +307,24 @@ class client(object):
         while True :
             time.sleep(10)
             self.multicast_CCHB()
-            
+
     def client_liveness_check(self):
         liveness_threshold = 20
         while True:
+            # print "presleep"
             time.sleep(15)
+            # print "postsleep"
             #Go through session table to check last_recv_time
+            # print "prelock"
             self.session_table_lock.acquire()
-            
+            # print "post-lock"
             for k in self.session_table.keys() :
                 if k != self.listening_addr :
                     if(time.time() - self.session_table[k]['last_recv_time'] > liveness_threshold):
                         self.remove_lost_client(k)
-            
+            # print "pre-unlock"
             self.session_table_lock.release()
+            # print "post-unlock"
     
     def remove_lost_client(self,key):
         # Delete client from all the tables
@@ -381,12 +402,7 @@ class client(object):
     #                          f.write(log)
     #                          f.close()
     #                          time.sleep(BEAT_PERIOD)              
-                            
                                                
-      
-                             
-                             
- 
     #           """""   // send_hb timer
     #          if self.connection_server=='Primary':
     #                     if not self.connection_switch:
@@ -427,6 +443,9 @@ class client(object):
             
             elif command[0] == 'listen' :
                 self.open_listener();
+            
+            elif command[0] == 'like' :
+                self.send_like((command[1], command[2]), command[3])
                 
             elif command[0] == 'q' :
                 sys.exit()

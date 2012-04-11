@@ -10,11 +10,11 @@ from mutagen.mp3 import MP3
 class Music_Info(object):
     def __init__(self, starting_counter):        
         self.song_dict = {}
-        self.repo_path = os.path.abspath("songs/") # FIXME: path should be changed later
-        song_files = os.listdir(self.repo_path)
+        repo_path = os.path.abspath("songs2/") # FIXME: path should be changed later
+        song_files = os.listdir(repo_path)
         for song_file in song_files :
             starting_counter[0] += 1;
-            self.song_dict[starting_counter[0]] = Song_Info(self.repo_path+'/'+song_file);
+            self.song_dict[starting_counter[0]] = Song_Info(repo_path+'/'+song_file);
             # print song_file
         
         print self.song_dict
@@ -49,10 +49,7 @@ class Song_Info(object) :
     def __repr__(self) :
         # print "inside song_info __repr"
         # return str((self.fname, self.title, self.artist, self.album, self.mtype, self.year, self.length))
-        return str((self.title))
-
-
-
+        return str((self.title, self.like))
 
 #class Session_Info(dict) :
 #    def __init__(self, name = None):
