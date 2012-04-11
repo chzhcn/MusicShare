@@ -19,6 +19,8 @@ from Client_Message import Client_Music_Message
 CS_Primary_Request_IP = '127.0.0.1'; CS_Primary_Request_Port = 12345;
 #Secondary Server
 CS_Backup_Request_IP = '127.0.0.1'; CS_Backup_Request_Port = 12347;
+#HeartBeat Time
+BEAT_PERIOD=15;CHECK_TIMEOUT=30
 
 class client(object):
 
@@ -47,6 +49,8 @@ class client(object):
         
         self.connect_server()
         self.open_listener()
+        self.received_hb={}
+        self._lock = threading.Lock()
         
         # self.thread_server_receive = threading.Thread(target=self.receive_server)
         # self.thread_server_receive.start() 
@@ -57,8 +61,11 @@ class client(object):
         self.thread_client_HB = threading.Thread(target=self.period_CCHB)
         self.thread_client_HB.start()
 
-        # self.thread_server_HB = threading.Thread(target=self.send_HB)
-        # self.thread_server_HB.start()
+        self.thread_server_HB = threading.Thread(target=self.send_hb)
+        self.thread_server_HB.start()
+        
+        self.thread_client_DL = threading.Thread(target=self.detectLost)
+        self.thread_client_DL.start()
         
         self.thread_client_liveness = threading.Thread(target=self.client_liveness_check())
         self.thread_client_liveness.start()
@@ -117,7 +124,48 @@ class client(object):
             while self.t<10:
                 self.t=time.time()-past
             sys.exit()
-
+    def send_hb(self):      
+            while True: 
+                if self.connection_state and self.connection_server=='Primary':          
+                            try:
+                                self.hb = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
+                                self.hb_enable=True
+                            except:
+                                print "\n................Primary Server May be down........................"
+                                self.hb_enable=False                                
+ 
+                elif self.connection_state and self.connection_server=='Secondary': 
+                            try:
+                                self.hb = socket.create_connection((CS_Backup_Request_IP, CS_Backup_Request_Port))
+                                self.hb_enable=True
+                            except:
+                                print "\n................Secondary Server May be down........................"
+                                self.hb_enable=False
+                                
+                if self.hb_enable: 
+                            try:
+                                message=('PyHB',self.username)
+                                self.hb.send(str(message)) 
+                            except:
+                                print "HB cannot send to server" 
+                            print "\nHeartbeat Message is sent to %s %s" % (str(self.connection_server), str(time.ctime()) ) 
+                            self.hb.shutdown(socket.SHUT_RDWR)   
+                            self.hb.close() 
+                            self.received_hb[self.connection_server]=time.time()
+                            time.sleep(BEAT_PERIOD)
+    def detectLost(self):
+        while True:
+            limit = time.time() - CHECK_TIMEOUT
+            self._lock.acquire()
+            servername=''
+            for servername in self.received_hb.keys():
+                if self.received_hb[servername]<= limit:
+                    print "------------------%s Server get lost--------------------" %servername
+                    del self.received_hb[servername] 
+                    self.connection_state=False
+                    self.connect_server()
+            self._lock. release()
+            time.sleep(CHECK_TIMEOUT)
     def init_username(self):
         addr=self.listening_addr;
                 
