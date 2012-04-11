@@ -62,6 +62,9 @@ class client(object):
         self.thread_client_HB = threading.Thread(target=self.period_CCHB)
         self.thread_client_HB.start()
         
+        self.thread_client_liveness = threading.Thread(target=self.client_liveness_check())
+        self.thread_client_liveness.start()
+        
     def connect_server(self):
         
         # re_initialize socket state, so that this function can be reused.
@@ -297,6 +300,34 @@ class client(object):
         while True :
             time.sleep(10)
             self.multicast_CCHB()
+            
+    def client_liveness_check(self):
+        liveness_threshold = 20
+        while True:
+            time.sleep(15)
+            #Go through session table to check last_recv_time
+            self.session_table_lock.acquire()
+            
+            for k in self.session_table.keys() :
+                if k != self.listening_addr :
+                    if(time.time() - self.session_table[k]['last_recv_time'] > liveness_threshold):
+                        self.remove_lost_client(k)
+            
+            self.session_table_lock.release()
+    
+    def remove_lost_client(self,key):
+        # Delete client from all the tables
+        self.remove_session_table(key)
+        self.remove_music_table(key)
+        
+    def remove_session_table(self,key):
+        del self.session_table[key]
+
+    def remove_music_table(self, key):
+        
+        self.music_table_lock.acquire()
+        del self.music_table[key]
+        self.music_table_lock.release()
 
     def open_listener(self):
             self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
