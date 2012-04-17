@@ -44,14 +44,23 @@ class client(object):
         self.session_table_lock = threading.Lock()
         self.logical_clk_lock = threading.Lock()
         self.music_info_lock = threading.Lock()
-
+        
         # self.username_init1=False
         # self.username_init2=False
+        self.detectlost_lock = threading.Lock()
+        self.connection_server=''
+        self.connection_state=False
+        self.normal_shutdown=False
+        self.logical_time=0
+        self.poll_event=threading.Event()
+        self.hb_event=threading.Event()
+        self.received_hb={}
         
         self.connect_server()
         self.open_listener()
-        self.received_hb={}
-        self._lock = threading.Lock()
+        
+        
+
         
         # self.thread_server_receive = threading.Thread(target=self.receive_server)
         # self.thread_server_receive.start() 
@@ -62,38 +71,36 @@ class client(object):
         self.thread_client_HB = threading.Thread(target=self.period_CCHB)
         self.thread_client_HB.start()
         
-        self.hb_event=threading.Event()
-        self.thread_server_HB = threading.Thread(name='block',target=self.send_hb)
+
+        self.thread_server_HB = threading.Thread(target=self.send_hb)
         self.thread_server_HB.start()
         
         self.thread_client_DL = threading.Thread(target=self.detectLost)
         self.thread_client_DL.start()
+        
+        self.thread_poll_server= threading.Thread(target=self.poll_server)
+        self.thread_poll_server.start()
            
         self.thread_client_liveness = threading.Thread(target=self.client_liveness_check)
         self.thread_client_liveness.start()
 
     def connect_server(self):
         # Try Primary Server
-        print "Request Primary Server in next 5s, please wait"
-        past=time.time();
-        self.t=0
-        while self.t<5:
-            try: 
-                self.s = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port),10)
-                self.connection_state=True
-                self.connection_server='Primary'
-                self.prevous_server=self.connection_server
-                self.judge=True
-                
-                print "Connected to Primary Server!!!"
-                break
-            except: 
-                self.connection_state=False
-                self.connection_pserver_fail=True
+        if self.connection_server=='':
+            print "Request Primary Server in next 5s, please wait"
+            past=time.time();
+            self.t=0
+            while self.t<5:
+                try: 
+                        self.s = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port),10)
+                        self.connection_state=True
+                        self.connection_server='Primary'   
+                        print "Connected to Primary Server!!!"
+                        break
+                except: 
+                        self.connection_state=False
                         
-                #self.prevous_server=''
-                        
-            self.t=time.time()-past
+                self.t=time.time()-past
 
         # Try Secondary server
         if self.connection_state==False:
@@ -104,18 +111,22 @@ class client(object):
             while self.t<10:
                 try: 
                         self.s = socket.create_connection((CS_Backup_Request_IP, CS_Backup_Request_Port),10)
+                        print "Connected to Secondary Server!!!"
                         self.connection_state=True
                         self.connection_server='Secondary'
-                        self.connection_Sserver=True
-                        print "Connected to Secondary Server!!!"
-                        self.judge=True
-                        self.connection_state=True
                         break
                 except: 
                         self.connection_state=False
-    
                 self.t=time.time()-past
-
+             
+            if self.connection_server=='Secondary' and self.username:
+                        self.hb_event.set()
+                        self.poll_event.set()
+                        self.s.shutdown(socket.SHUT_RDWR)    
+                        self.s.close()    
+          
+                                   
+                       
         # Give user feedback and close the program   
         if self.connection_state==False:
             print "Secondary Server fails,,.............."
@@ -128,16 +139,19 @@ class client(object):
             sys.exit()
 
     def send_hb(self):
-        self.hb_event.wait()      
-        while True: 
-                if self.connection_state and self.connection_server=='Primary':          
-                            try:
-                                self.hb = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
-                                self.hb_enable=True
-                            except:
-                                print "\n................Primary Server May be down........................"
-                                self.hb_enable=False                                
- 
+            flag=True
+            while True: 
+                self.hb_event.wait()    
+                if self.connection_state and self.connection_server=='Primary': 
+                                try:
+                                    self.hb = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
+                                    self.hb_enable=True
+                                except:
+                                    if flag:
+                                        print "\n................Primary Server May be down........................"
+                                        flag=False
+                                    self.hb_enable=False
+                                    
                 elif self.connection_state and self.connection_server=='Secondary': 
                             try:
                                 self.hb = socket.create_connection((CS_Backup_Request_IP, CS_Backup_Request_Port))
@@ -148,29 +162,67 @@ class client(object):
                                 
                 if self.hb_enable: 
                             try:
-                                message=('PyHB',self.username)
+                                message=('PyHB',self.username,self.logical_time)
                                 self.hb.send(str(message)) 
+                                self.logical_time=self.logical_time+1
                             except:
                                 print "HB cannot send to server" 
-                            print "\nHeartbeat Message is sent to %s %s" % (str(self.connection_server), str(time.ctime()) ) 
-                            self.hb.shutdown(socket.SHUT_RDWR)   
-                            self.hb.close() 
+                            print "\nHeartbeat Message is sent to '%s' %s" % (str(self.connection_server), str(time.ctime()) ) 
                             self.received_hb[self.connection_server]=time.time()
+                            self.hb_enable=False  
+                            self.hb.shutdown(socket.SHUT_RDWR) 
+                            self.hb.close() 
+                        
                             time.sleep(BEAT_PERIOD)
                             
     def detectLost(self):
         while True:
-            limit = time.time() - CHECK_TIMEOUT
-            self._lock.acquire()
-            servername=''
-            for servername in self.received_hb.keys():
-                if self.received_hb[servername]<= limit:
-                    print "------------------%s Server get lost--------------------" %servername
-                    del self.received_hb[servername] 
-                    self.connection_state=False
-                    self.connect_server()
-            self._lock. release()
-            time.sleep(CHECK_TIMEOUT)
+                limit = time.time() - CHECK_TIMEOUT
+                self.detectlost_lock.acquire()
+                servername=''
+                for servername in self.received_hb.keys():
+                    if self.received_hb[servername]<= limit:
+    
+                        del self.received_hb[servername] 
+                        
+                        if self.normal_shutdown:
+                            print "------------------I gracefully leave the %s Server --------------------" %servername
+                            self.normal_shutdown=False
+                        else:
+                            print "------------------%s Server get lost--------------------" %servername
+                            
+                            self.connection_state=False
+                            self.hb_event.clear()
+                            self.connect_server()
+                self.detectlost_lock.release()
+                #time.sleep(CHECK_TIMEOUT) 
+                
+    def poll_server(self):
+            t=15
+            while True:
+                self.poll_event.wait()
+                print "Primary is being polling"
+                if self.connection_state and self.connection_server=='Secondary' : 
+                    try:
+                        self.poll = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
+                        pconn=True                
+                    except:
+                        pconn=False
+                        
+                    if pconn:           
+                        print "...................Server state exchange is processing...................."
+                        self.poll.shutdown(socket.SHUT_RDWR)
+                        self.poll.close()
+                        self.normal_shutdown=True
+                        self.connection_state=True;self.connection_server='Primary'
+                        self.poll_event.clear()
+                 
+                    time.sleep(t)
+    #                if t<3600:
+    #                    t=t+60
+    #                else:
+    #                    t=3600            
+                
 
     def init_username(self):
         addr=self.listening_addr;
@@ -200,6 +252,8 @@ class client(object):
                 self.s.shutdown(socket.SHUT_RDWR)
                 self.s.close()
                 self.hb_event.set()
+                if self.connection_server=="Secondary":
+                    self.poll_event.set()
                 
                 xyz=ast.literal_eval(data)# change it to tuple
                 if xyz[0] == 'UT':
