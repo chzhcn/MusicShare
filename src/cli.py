@@ -344,18 +344,20 @@ class client(object):
                     print 'message received is discovery; sending back a client heartbeat message as reply'
                     self.send_C_Music(message.sender_listening_addr, 'CCHB') 
                 
-            elif message.m_type == 'LIKE' or message.m_tye == 'STREAM'  :
+            elif message.m_type == 'LIKE' or message.m_type == 'STREAM'  :
                 if message.receiver_app_start_time == self.app_start_time : # app_start_time match
                     if message.m_type == 'LIKE' and message.song_seq_no in self.music_info.keys() :
                         self.music_info[message.song_seq_no].like = self.music_info[message.song_seq_no].like+1
-                    elif message.m_tye == 'STREAM' :
-                        print 'stream: ' + message
-                        self.thread_stream= threading.Thread(target=self.steam_music, args=(message,))
+                    elif message.m_type == 'STREAM' :
+                        # print 'stream: ' + message
+                        self.thread_stream= threading.Thread(target=self.stream_music, args=(message,))
                 else : # app_start_time doen't match
                     self.send_C_Music(message.sender_listening_addr, 'CCHB')
 
-    def stream_music(self, message) :
+    def stream_music(self, message_arg) :
         ''' This function handles the streaming request message '''
+        print 'in stream_music'
+        message = message_arg[0]
         song_local_num =  message.song_seq_no
 
         if song_local_num in self.file_table.key() :
@@ -373,7 +375,7 @@ class client(object):
             
     def dump_table(self):
         print 'dump tables'
-        print self.music_table
+        # print self.music_table
         # print self.session_table
         # print self.file_table
  
@@ -403,10 +405,10 @@ class client(object):
             self.music_info_lock.release()
 
     def send_like(self, receiver_key, song_seq_num):
-        self.send_request(self, 'LIKE', receiver_key, song_seq_num)
+        self.send_request('LIKE', receiver_key, song_seq_num)
 
     def send_stream(self, receiver_key, song_seq_num):
-        self.send_request(self, 'STREAM', receiver_key, song_seq_num)
+        self.send_request('STREAM', receiver_key, song_seq_num)
             
     def send_C_Music(self, address, m_type):
         self.logical_clk_lock.acquire()
@@ -599,7 +601,7 @@ class client(object):
                 sys.exit()
                 
             else :
-                print "no match"
+                print "command not recognized"
 
 def main() :
     c = client();
