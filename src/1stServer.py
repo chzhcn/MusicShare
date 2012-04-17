@@ -83,7 +83,6 @@ class EchoHandler(asyncore.dispatcher):
         self.chunk_size = 8192
         self.v=vector   # vector object
         self.client=client
-        print "My client connection is ,",self.client.connected
 #        self.v=vector
 #        print "My vector from Echohandler is :", self.v.toString
         self.logger = logging.getLogger('EchoHandler%s' % str(sock.getsockname()))
@@ -173,7 +172,7 @@ class EchoHandler(asyncore.dispatcher):
                                                         self.lock.release()
                                                         
                                                         self.v.tick()
-                                                        print "client connected :",self.client.connected
+
                                                         if self.client.connected:                           
                                                             self.client.express_send()
                                                        
