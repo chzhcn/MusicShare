@@ -18,13 +18,13 @@ class Music_Info(object):
         for song_file in song_files :
             starting_counter[0] += 1;
             filepath = repo_path+os.sep+song_file
-            self.read_song(starting_counter[0], filepath)
+            self.read_song(self.song_dict, self.file_dict, starting_counter[0], filepath)
         
         return self.song_dict, self.file_dict
 
-    def read_song(self, index, filepath)
-            self.file_dict[index] = filepath;
-            self.song_dict[index] = Song_Info(filepath);
+    def read_song(self, song_dict, file_dict, index, filepath)
+            song_dict[index] = Song_Info(filepath);
+            file_dict[index] = filepath;
 
     def __repr__(self) :
         return str(self.song_dict)

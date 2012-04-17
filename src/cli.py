@@ -193,7 +193,7 @@ class client(object):
             t=15
             while True:
                 self.poll_event.wait()
-                print "Primary is being polling"
+                print "Primary is being polled"
                 if self.connection_state and self.connection_server=='Secondary' : 
                     try:
                         self.poll = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
@@ -343,24 +343,38 @@ class client(object):
                     print 'message received is discovery; sending back a client heartbeat message as reply'
                     self.send_C_Music(message.sender_listening_addr, 'CCHB') 
                 
-            elif message.m_type == 'LIKE' :
-                if message.receiver_app_start_time == self.app_start_time :
-                    self.music_info.song_dict[message.song_seq_no].like = self.music_info.song_dict[message.song_seq_no].like+1
-            elif message.m_tye == 'STREAM' :
-                if message.receiver_app_start_time == self.app_start_time :
-                    print 'stream: ' + message
-                    self.thread_stream= threading.Thread(target=self.steam_music, args=(message,))
+            elif message.m_type == 'LIKE' or message.m_tye == 'STREAM'  :
+                if message.receiver_app_start_time = self.app_start_time : # app_start_time match
+                    if message.m_type == 'LIKE' and message.song_seq_no in self.music_info.keys() :
+                        self.music_info[message.song_seq_no].like = self.music_info[message.song_seq_no].like+1
+                    elif message.m_tye == 'STREAM' :
+                        print 'stream: ' + message
+                        self.thread_stream= threading.Thread(target=self.steam_music, args=(message,))
+                else : # app_start_time doen't match
+                    self.send_C_Music(message.sender_listening_addr, 'CCHB')
 
     def stream_music(self, message) :
         ''' This function handles the streaming request message '''
+        song_local_num =  message.song_seq_no
+
+        if song_local_num in self.file_table.key() :
+            song_local_path = self.file_table[song_num]
+            requester_ip = message.sender_listening_addr[0]
+            requester_stream_port = message.streaming_port
+            print song_local_num
+            print song_local_path
+            print requester_ip
+            print requester_stream_port
+        else :
+            # FIXME: requested song is not there; should reply with rejection
+            pass
         pass
             
     def dump_table(self):
-        print 'dump tables2'
-        # for mi in self.music_table.values() :
-        #     print mi.song_dict
+        print 'dump tables'
         # print self.music_table
         # print self.session_table
+        # print self.file_table
  
     def send_obj(self, addr, obj):  
         try :
