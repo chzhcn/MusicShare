@@ -14,7 +14,7 @@ import select;
 
 from client_info import Music_Info
 from Client_Message import Client_Music_Message
-from Client_Message import Client_Like_Message
+from Client_Message import Client_Request_Message
 
 #Primary Server
 CS_Primary_Request_IP = '127.0.0.1'; CS_Primary_Request_Port = 12345;
@@ -38,7 +38,8 @@ class client(object):
         self.music_table = {}
         self.session_table = {}
         self.file_table = {}
-        self.music_info, self.file_table = Music_Info.read_repo(self.music_counter)
+
+        self.music_info, self.file_table = Music_Info().read_repo(self.music_counter)
         
         self.music_table_lock = threading.Lock()
         self.session_table_lock = threading.Lock()
@@ -344,7 +345,7 @@ class client(object):
                     self.send_C_Music(message.sender_listening_addr, 'CCHB') 
                 
             elif message.m_type == 'LIKE' or message.m_tye == 'STREAM'  :
-                if message.receiver_app_start_time = self.app_start_time : # app_start_time match
+                if message.receiver_app_start_time == self.app_start_time : # app_start_time match
                     if message.m_type == 'LIKE' and message.song_seq_no in self.music_info.keys() :
                         self.music_info[message.song_seq_no].like = self.music_info[message.song_seq_no].like+1
                     elif message.m_tye == 'STREAM' :
@@ -372,7 +373,7 @@ class client(object):
             
     def dump_table(self):
         print 'dump tables'
-        # print self.music_table
+        print self.music_table
         # print self.session_table
         # print self.file_table
  
@@ -392,7 +393,7 @@ class client(object):
         self.logical_clk_time += 1
         try :
             self.music_info_lock.acquire()
-            self.send_obj(receiver_key, Client_Like_Message(request_type, self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.session_table[receiver_key]['app_start_time'], song_seq_num, self.streaming_addr[1]))
+            self.send_obj(receiver_key, Client_Request_Message(request_type, self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.session_table[receiver_key]['app_start_time'], song_seq_num, self.streaming_addr[1]))
         except Exception as inst:
             print type(inst)
             print inst
@@ -412,7 +413,7 @@ class client(object):
         self.logical_clk_time += 1
         try :
             self.music_info_lock.acquire()
-            self.send_obj(address, Client_Request_Message(m_type, self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.music_info))
+            self.send_obj(address, Client_Music_Message(m_type, self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.music_info))
         except Exception as inst:
             print type(inst)
             print inst
@@ -576,7 +577,8 @@ class client(object):
             command = command_str.split(' ');
                 
             if command[0] == 'user' :
-                self.username = self.music_info.username = command[1]
+                # self.username = self.music_info.username = command[1]
+                self.username = command[1]
                 print self.listening_addr
                 self.init_username()
                 # self.send_SD()

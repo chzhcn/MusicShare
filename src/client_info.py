@@ -8,7 +8,7 @@ import os
 from mutagen.mp3 import MP3
 
 class Music_Info(object):
-    def __init__(self, starting_counter):        
+    def __init__(self):
         self.song_dict = {}
         self.file_dict = {}
 
@@ -22,7 +22,7 @@ class Music_Info(object):
         
         return self.song_dict, self.file_dict
 
-    def read_song(self, song_dict, file_dict, index, filepath)
+    def read_song(self, song_dict, file_dict, index, filepath) :
             song_dict[index] = Song_Info(filepath);
             file_dict[index] = filepath;
 
