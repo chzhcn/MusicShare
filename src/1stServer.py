@@ -48,8 +48,9 @@ class EchoServer(asyncore.dispatcher):
     """Receives connections and establishes handlers for each client.
     """
     
-    def __init__(self, address,v):
+    def __init__(self, address,v,client):
         self.v=v
+        self.client=client
         #print "My vector from EchoServer is ",self.v.toString()
         self.logger = logging.getLogger('EchoServer')
         asyncore.dispatcher.__init__(self)
@@ -65,7 +66,7 @@ class EchoServer(asyncore.dispatcher):
         # Called when a client connects to our socket
         client_info = self.accept()
         self.logger.debug('handle_accept() -> %s', client_info[1])
-        EchoHandler(sock=client_info[0],vector=self.v)
+        EchoHandler(sock=client_info[0],vector=self.v,client=self.client)
         return
     
     def handle_close(self):
@@ -77,10 +78,12 @@ class EchoHandler(asyncore.dispatcher):
     """Handles echoing messages from a single client.
     """
     
-    def __init__(self, sock, vector):
+    def __init__(self, sock, vector,client):
        
         self.chunk_size = 8192
         self.v=vector   # vector object
+        self.client=client
+        print "My client connection is ,",self.client.connected
 #        self.v=vector
 #        print "My vector from Echohandler is :", self.v.toString
         self.logger = logging.getLogger('EchoHandler%s' % str(sock.getsockname()))
@@ -170,8 +173,9 @@ class EchoHandler(asyncore.dispatcher):
                                                         self.lock.release()
                                                         
                                                         self.v.tick()
-                                                        
-                                                        
+                                                        print "client connected :",self.client.connected
+                                                        if self.client.connected:                           
+                                                            self.client.express_send()
                                                        
                                                         self.remoteUT=[]
                                                         for y in UTM:
@@ -275,8 +279,10 @@ class Monitor():
                                 if n[2]==susername:
                                     print "Lost user '%s' has been removed from UT" %n[2]
                                     UTM.remove(n)
-                                    self.v.tick()
-                
+                                    #self.v.tick()
+                                    
+                            if self.client.connected:                           
+                                    self.client.express_send()
                             print "Current UT is :",UTM      
                             self.remoteUT=[]      
                             for i in UTM:
@@ -335,14 +341,11 @@ class EchoClient(asyncore.dispatcher):
 ##        time.sleep(30)
         
 #        pass
-    @classmethod
-    def express_send(cls):
+    def express_send(self):
         msg=str(('express',UTM))
-        cls.send(self,msg)   
+        self.send(msg)
 
 
-
-        
     def send_hb(self):
         global UTM
         while True:
@@ -479,7 +482,8 @@ def main():
     vector=VectorClock(2,0)
     vector.init()
     client = EchoClient(vector)
-    server = EchoServer(address,vector)
+
+    server = EchoServer(address,vector,client)
     monitor=Monitor(vector)
     
     asyncore.loop()

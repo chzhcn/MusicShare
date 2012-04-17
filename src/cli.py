@@ -245,7 +245,7 @@ class client(object):
                 print type(inst)
                 print inst
                 self.init_username_error()
-                    
+            print "the data is ",data        
             if len(data) != 0:
                 print '2'
                 
