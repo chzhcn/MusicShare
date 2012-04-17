@@ -345,26 +345,32 @@ class client(object):
                     self.send_C_Music(message.sender_listening_addr, 'CCHB') 
                 
             elif message.m_type == 'LIKE' or message.m_type == 'STREAM'  :
-                if message.receiver_app_start_time == self.app_start_time : # app_start_time match
+                # print message.receiver_app_start_time
+                # print self.app_start_time
+                if message.receiver_app_start_time == self.app_start_time :
+                    print 'app_start_times match'
                     if message.m_type == 'LIKE' and message.song_seq_no in self.music_info.keys() :
                         self.music_info[message.song_seq_no].like = self.music_info[message.song_seq_no].like+1
                     elif message.m_type == 'STREAM' :
-                        # print 'stream: ' + message
-                        self.thread_stream= threading.Thread(target=self.stream_music, args=(message,))
-                else : # app_start_time doen't match
+                        # print 'stream'
+                        self.thread_stream = threading.Thread(target=self.stream_music, args=(message,))
+                        self.thread_stream.start()
+                        # self.thread_stream = threading.Thread(target=self.stream_music)
+                else :
+                    print 'app_start_times don\'t match'
                     self.send_C_Music(message.sender_listening_addr, 'CCHB')
 
-    def stream_music(self, message_arg) :
+    def stream_music(self, message) :
         ''' This function handles the streaming request message '''
         print 'in stream_music'
-        message = message_arg[0]
-        song_local_num =  message.song_seq_no
+        # message = message_arg[0]
+        song_local_seq =  message.song_seq_no
 
-        if song_local_num in self.file_table.key() :
-            song_local_path = self.file_table[song_num]
+        if song_local_seq in self.file_table.keys() :
+            song_local_path = self.file_table[song_local_seq]
             requester_ip = message.sender_listening_addr[0]
             requester_stream_port = message.streaming_port
-            print song_local_num
+            print song_local_seq
             print song_local_path
             print requester_ip
             print requester_stream_port
@@ -431,10 +437,7 @@ class client(object):
             # print (k, v)
             if k != self.listening_addr :
                 self.send_C_Music(k, m_type)
-            #else :
-            #    print "comparison is true"   
         self.session_table_lock.release() 
-                
                 
     def multicast_CCD(self):
         self.multicast_C_Music('CCD')
