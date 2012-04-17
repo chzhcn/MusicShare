@@ -18,8 +18,9 @@ class Client_Music_Message(Client_Message) :
         super(Client_Music_Message, self).__init__(m_type, sender_listening_addr, username, app_start_time, logical_clk_time)
         self.music_info = music_info
 
-class Client_Like_Message(Client_Message):
-    def __init__(self,m_type,sender_listening_addr,username,app_start_time,logical_clk_time, receiver_app_start_time,song_seq_no ):
+class Client_Request_Message(Client_Message):
+    def __init__(self,m_type,sender_listening_addr,username,app_start_time,logical_clk_time, receiver_app_start_time,song_seq_no, streaming_port):
         super(Client_Like_Message,self).__init__(m_type,sender_listening_addr,username,app_start_time,logical_clk_time)
         self.receiver_app_start_time = receiver_app_start_time
         self.song_seq_no = song_seq_no
+        self.streaming_port = streaming_port

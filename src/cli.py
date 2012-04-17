@@ -25,7 +25,6 @@ BEAT_PERIOD=15;CHECK_TIMEOUT=30
 
 class client(object):
 
-
     def __init__(self):
         self.s = None;
         self.send_socket = None;
@@ -35,18 +34,17 @@ class client(object):
         self.logical_clk_time = 0;
 
         self.music_counter = [0, ];
-        
-        self.music_info = Music_Info(self.music_counter)
+
         self.music_table = {}
         self.session_table = {}
+        self.file_table = {}
+        self.music_info, self.file_table = Music_Info.read_repo(self.music_counter)
         
         self.music_table_lock = threading.Lock()
         self.session_table_lock = threading.Lock()
         self.logical_clk_lock = threading.Lock()
         self.music_info_lock = threading.Lock()
         
-        # self.username_init1=False
-        # self.username_init2=False
         self.detectlost_lock = threading.Lock()
         self.connection_server=''
         self.connection_state=False
@@ -58,12 +56,7 @@ class client(object):
         
         self.connect_server()
         self.open_listener()
-        
-        
-
-        
-        # self.thread_server_receive = threading.Thread(target=self.receive_server)
-        # self.thread_server_receive.start() 
+        self.open_stream_port()
         
         self.thread_client_receive = threading.Thread(target=self.receive_client)
         self.thread_client_receive.start()
@@ -71,7 +64,6 @@ class client(object):
         self.thread_client_HB = threading.Thread(target=self.period_CCHB)
         self.thread_client_HB.start()
         
-
         self.thread_server_HB = threading.Thread(target=self.send_hb)
         self.thread_server_HB.start()
         
@@ -170,7 +162,7 @@ class client(object):
                             print "\nHeartbeat Message is sent to '%s' %s" % (str(self.connection_server), str(time.ctime()) ) 
                             self.received_hb[self.connection_server]=time.time()
                             self.hb_enable=False  
-                            self.hb.shutdown(socket.SHUT_RDWR) 
+                            # self.hb.shutdown(socket.SHUT_RDWR)
                             self.hb.close() 
                         
                             time.sleep(BEAT_PERIOD)
@@ -195,7 +187,7 @@ class client(object):
                             self.hb_event.clear()
                             self.connect_server()
                 self.detectlost_lock.release()
-                #time.sleep(CHECK_TIMEOUT) 
+                time.sleep(CHECK_TIMEOUT) 
                 
     def poll_server(self):
             t=15
@@ -249,7 +241,7 @@ class client(object):
             if len(data) != 0:
                 print '2'
                 
-                self.s.shutdown(socket.SHUT_RDWR)
+                # self.s.shutdown(socket.SHUT_RDWR)
                 self.s.close()
                 self.hb_event.set()
                 if self.connection_server=="Secondary":
@@ -354,12 +346,20 @@ class client(object):
             elif message.m_type == 'LIKE' :
                 if message.receiver_app_start_time == self.app_start_time :
                     self.music_info.song_dict[message.song_seq_no].like = self.music_info.song_dict[message.song_seq_no].like+1
+            elif message.m_tye == 'STREAM' :
+                if message.receiver_app_start_time == self.app_start_time :
+                    print 'stream: ' + message
+                    self.thread_stream= threading.Thread(target=self.steam_music, args=(message,))
+
+    def stream_music(self, message) :
+        ''' This function handles the streaming request message '''
+        pass
             
     def dump_table(self):
         print 'dump tables2'
         # for mi in self.music_table.values() :
         #     print mi.song_dict
-        print self.music_table
+        # print self.music_table
         # print self.session_table
  
     def send_obj(self, addr, obj):  
@@ -373,12 +373,12 @@ class client(object):
             print "send_obj() exception. addr: %s obj: %s" % (addr, str(obj))
             raise
 
-    def send_like(self, receiver_key, song_seq_num):
+    def send_request(self, request_type, receiver_key, song_seq_num):
         self.logical_clk_lock.acquire()
         self.logical_clk_time += 1
         try :
             self.music_info_lock.acquire()
-            self.send_obj(receiver_key, Client_Like_Message('LIKE', self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.session_table[receiver_key]['app_start_time'], song_seq_num))
+            self.send_obj(receiver_key, Client_Like_Message(request_type, self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.session_table[receiver_key]['app_start_time'], song_seq_num, self.streaming_addr[1]))
         except Exception as inst:
             print type(inst)
             print inst
@@ -386,14 +386,19 @@ class client(object):
         finally:
             self.logical_clk_lock.release()
             self.music_info_lock.release()
-    
+
+    def send_like(self, receiver_key, song_seq_num):
+        self.send_request(self, 'LIKE', receiver_key, song_seq_num)
+
+    def send_stream(self, receiver_key, song_seq_num):
+        self.send_request(self, 'STREAM', receiver_key, song_seq_num)
             
     def send_C_Music(self, address, m_type):
         self.logical_clk_lock.acquire()
         self.logical_clk_time += 1
         try :
             self.music_info_lock.acquire()
-            self.send_obj(address, Client_Music_Message(m_type, self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.music_info))
+            self.send_obj(address, Client_Request_Message(m_type, self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.music_info))
         except Exception as inst:
             print type(inst)
             print inst
@@ -462,7 +467,14 @@ class client(object):
             self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
             self.listening_sock.bind(self.listening_addr)
             self.listening_addr = self.listening_sock.getsockname()
-            self.listening_sock.listen(5)           
+            self.listening_sock.listen(5)
+
+    def open_stream_port(self):
+            self.streaming_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.streaming_addr = (socket.gethostbyname(socket.gethostname()), 0)
+            self.streaming_sock.bind(self.streaming_addr)
+            self.streaming_addr = self.streaming_sock.getsockname()
+            self.streaming_sock.listen(5)
                     
     # def send_hb(self):
     #     #print ('Sending Heartbeat to IP %s , port %d\n') % (CS_Primary_Request_IP, CS_Primary_Request_Port)       
@@ -563,6 +575,9 @@ class client(object):
             
             elif command[0] == 'like' :
                 self.send_like((command[1], int(command[2])), int(command[3]))
+
+            elif command[0] == 'stream' :
+                self.send_stream((command[1], int(command[2])), int(command[3]))
                 
             elif command[0] == 'q' :
                 sys.exit()

@@ -10,28 +10,30 @@ from mutagen.mp3 import MP3
 class Music_Info(object):
     def __init__(self, starting_counter):        
         self.song_dict = {}
+        self.file_dict = {}
+
+    def read_repo(self, starting_counter):
         repo_path = os.path.abspath("songs2/") # FIXME: path should be changed later
         song_files = os.listdir(repo_path)
         for song_file in song_files :
             starting_counter[0] += 1;
-            self.song_dict[starting_counter[0]] = Song_Info(repo_path+'/'+song_file);
-            # print song_file
+            filepath = repo_path+os.sep+song_file
+            self.read_song(starting_counter[0], filepath)
         
-        print self.song_dict
+        return self.song_dict, self.file_dict
+
+    def read_song(self, index, filepath)
+            self.file_dict[index] = filepath;
+            self.song_dict[index] = Song_Info(filepath);
+
     def __repr__(self) :
-        # print "inside __repr__"
         return str(self.song_dict)
 
-    # def __str__(self) :
-    #     print "inside __str__"
-    #     return str(self.song_dict)
-
-        
 class Song_Info(object) :
-    def __init__(self, filename) :
-        # print filename
-        audio = MP3(filename)
-        self.fname = filename
+    def __init__(self, filepath) :
+        # print filepath
+        audio = MP3(filepath)
+        self.fname = filepath
         self.title = self.try_get_key(audio, 'TIT2')
         self.artist = self.try_get_key(audio, 'TPE1')
         self.album = self.try_get_key(audio, 'TALB')
@@ -47,10 +49,4 @@ class Song_Info(object) :
             return None;
         
     def __repr__(self) :
-        # print "inside song_info __repr"
-        # return str((self.fname, self.title, self.artist, self.album, self.mtype, self.year, self.length))
         return str((self.title, self.like))
-
-#class Session_Info(dict) :
-#    def __init__(self, name = None):
-#        self["username"] = name
