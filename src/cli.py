@@ -11,8 +11,11 @@ import time;
 import sys;
 import threading;
 import select;
+import shutil
+import os
 
 from client_info import Music_Info
+from Client_Message import Client_Message
 from Client_Message import Client_Music_Message
 from Client_Message import Client_Request_Message
 
@@ -38,7 +41,8 @@ class client(object):
         self.music_table = {}
         self.session_table = {}
         self.file_table = {}
-
+        self.music_info_object = Music_Info()
+        ##################### change
         self.music_info, self.file_table = Music_Info().read_repo(self.music_counter)
         
         self.music_table_lock = threading.Lock()
@@ -495,6 +499,29 @@ class client(object):
             self.streaming_sock.bind(self.streaming_addr)
             self.streaming_addr = self.streaming_sock.getsockname()
             self.streaming_sock.listen(5)
+    
+    def add_song(self,filepath):
+        repo_path = os.path.abspath("songs/") # FIXME: path should be changed later
+        #check if song with same name exists
+        self.music_info_lock.acquire()
+        if(self.music_info_object.check_song_exists(self.music_info,filepath)==False):
+            # copy the file from current location to repo folder
+            shutil.copy(filepath,repo_path)
+            self.music_counter[0] +=1;
+            self.music_info_object.read_song(self.music_info,self.file_table,self.music_counter[0], filepath)
+            self.music_info_lock.release()
+        else:
+            self.music_info_lock.release()
+            print 'duplicate song already exists in library'
+    
+    def remove_song(self,filepath) :
+        #check if song exists
+        self.music_info_lock.acquire()
+        #Remove song from song_dict/music_info
+        self.music_info_object.remove_song(self.music_info,self.file_table,filepath)
+        self.music_info_lock.release()
+        
+        
                     
     # def send_hb(self):
     #     #print ('Sending Heartbeat to IP %s , port %d\n') % (CS_Primary_Request_IP, CS_Primary_Request_Port)       
@@ -599,6 +626,12 @@ class client(object):
 
             elif command[0] == 'stream' :
                 self.send_stream((command[1], int(command[2])), int(command[3]))
+            
+            elif command[0] == 'add':
+                self.add_song(command[1])
+            
+            elif command[0]=='remove':
+                self.remove_song(command[1])
                 
             elif command[0] == 'q' :
                 sys.exit()

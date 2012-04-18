@@ -13,6 +13,7 @@ class Music_Info(object):
         self.file_dict = {}
 
     def read_repo(self, starting_counter):
+        #repo_path="D:\workspace\MusicShare\songs2"
         repo_path = os.path.abspath("songs2/") # FIXME: path should be changed later
         song_files = os.listdir(repo_path)
         for song_file in song_files :
@@ -25,6 +26,22 @@ class Music_Info(object):
     def read_song(self, song_dict, file_dict, index, filepath) :
             song_dict[index] = Song_Info(filepath);
             file_dict[index] = filepath;
+    
+    def check_song_exists(self,song_dict,filepath):
+        new_song_title = Song_Info(filepath).title
+        for index, song_info in song_dict:
+            if(song_info.title==new_song_title):
+                return True
+        return False
+    
+    def remove_song(self,song_dict,file_dict,filepath):
+        old_song_title = Song_Info(filepath).title
+        for index, song_info in song_dict.items():
+            if(song_info.title==old_song_title):
+                del song_dict[index]
+                del file_dict[index]
+                #remove from repo folder
+                os.remove(filepath)
 
     def __repr__(self) :
         return str(self.song_dict)
