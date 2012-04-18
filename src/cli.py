@@ -42,8 +42,7 @@ class client(object):
         self.session_table = {}
         self.file_table = {}
         self.music_info_object = Music_Info()
-        ##################### change
-        self.music_info, self.file_table = Music_Info().read_repo(self.music_counter)
+        self.music_info, self.file_table = self.music_info_object.read_repo(self.music_counter)
         
         self.music_table_lock = threading.Lock()
         self.session_table_lock = threading.Lock()
@@ -298,8 +297,7 @@ class client(object):
             message = pickle.loads(data);
             
             print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
-            # self.dump_table()
-            
+
             self.session_table_lock.acquire()   
             
             session_table_entry = {};       
@@ -341,8 +339,7 @@ class client(object):
                 
                 print "client discovery | heartbeat message received"
                 print message.m_type, message.sender_listening_addr
-                self.dump_table()
-                
+
                 if message.m_type == 'CCD'  :
                     # send hb message back right asway
                     print 'message received is discovery; sending back a client heartbeat message as reply'
@@ -384,10 +381,10 @@ class client(object):
         pass
             
     def dump_table(self):
-        print 'dump tables'
-        # print self.music_table
+        print 'dump tables: '
+        print self.music_table
         # print self.session_table
-        # print self.file_table
+        print self.file_table
  
     def send_obj(self, addr, obj):  
         try :
@@ -499,9 +496,9 @@ class client(object):
             self.streaming_sock.bind(self.streaming_addr)
             self.streaming_addr = self.streaming_sock.getsockname()
             self.streaming_sock.listen(5)
-    
+
     def add_song(self,filepath):
-        repo_path = os.path.abspath("songs/") # FIXME: path should be changed later
+        repo_path = os.path.abspath("songs2/") # FIXME: path should be changed later
         #check if song with same name exists
         self.music_info_lock.acquire()
         if(self.music_info_object.check_song_exists(self.music_info,filepath)==False):
@@ -513,93 +510,14 @@ class client(object):
         else:
             self.music_info_lock.release()
             print 'duplicate song already exists in library'
-    
+
     def remove_song(self,filepath) :
         #check if song exists
         self.music_info_lock.acquire()
         #Remove song from song_dict/music_info
         self.music_info_object.remove_song(self.music_info,self.file_table,filepath)
         self.music_info_lock.release()
-        
-        
-                    
-    # def send_hb(self):
-    #     #print ('Sending Heartbeat to IP %s , port %d\n') % (CS_Primary_Request_IP, CS_Primary_Request_Port)       
-    #         while True: 
-    #           if self.connection_state and self.connection_server=='Primary':
-    #             if self.username_init2 or self.connection_switch_to_p:            
-    #                      if self.fist_hearthb:     
-    #                         time.sleep(1)
-    #                         self.fist_hearthb=False
 
-    #                      if not self.connection_switch_to_p:
-    #                         try:
-    #                             self.hb = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
-    #                             self.hb_enable=True
-    #                         except:
-    #                             if not self.alter:
-    #                                 print "\n................Primary Server May be down........................"
-    #                                 self.alter=True
-    #                             else:
-    #                                 self.connectserver()
-    #                             self.hb_enable=False
-                                 
-    #                             time.sleep(BEAT_PERIOD)
- 
-    #           elif self.connection_state and self.connection_server=='Secondary': 
-    #                     if self.connection_lost or self.username_init2: 
-    #                         if self.fist_hearthb:     
-    #                             time.sleep(1)
-    #                             self.fist_hearthb=False
-
-    #                         try:
-    #                             self.hb = socket.create_connection((CS_Backup_Request_IP, CS_Backup_Request_Port))
-    #                             #print "Oh yeah you are on the backup"
-    #                             self.hb_enable=True
-    #                         except:
-    #                             print "Secondary Server May be down"
-    #                             self.hb_enable=False
-                                
-    #           if self.hb_enable: 
-    #                          if os.path.isfile('CS_HB_Sentout.log.txt'):
-    #                             f=file('CS_HB_Sentout.log','a')
-    #                          else:
-    #                             f=file('CS_HB_Sentout.log','w')    
-    #                          try:
-    #                             message=('PyHB',self.username)
-    #                             self.hb.send(str(message)) 
-    #                          except:
-    #                             print "HB cannot send to server" 
-    #                          print "\nHeartbeat Message is sent to %s %s" % (str(self.connection_server), str(time.ctime()) ) 
-    #                          #self.hb.shutdown(socket.SHUT_RDWR)   
-    #                          self.hb.close() 
-    #                          self.received_hb[self.connection_server]=time.time()
-    #                          log= "Heartbeat is sent out, Time: %s \n" % time.ctime()
-    #                          f.write(log)
-    #                          f.close()
-    #                          time.sleep(BEAT_PERIOD)              
-                                               
-    #           """""   // send_hb timer
-    #          if self.connection_server=='Primary':
-    #                     if not self.connection_switch:
-    #                         try:
-    #                             self.hb = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
-    #                         except:
-    #                             print "Primary Server May be down"
-    #                             self.connectserver()
-    #                     else:
-    #                         pass      
-    #          elif self.connection_server=='Secondary':
-    #              try:
-    #                 self.hb = socket.create_connection((CS_Backup_Request_IP, CS_Backup_Request_Port))
-    #              except:
-    #                 print "Secondary Server May be down"
-    #                 self.connectserver()
-    #          else:
-    #             print "error"
-                
-    #          """                       
-        
     def run(self):
         
         while (True) :
@@ -626,12 +544,15 @@ class client(object):
 
             elif command[0] == 'stream' :
                 self.send_stream((command[1], int(command[2])), int(command[3]))
-            
+
             elif command[0] == 'add':
                 self.add_song(command[1])
-            
+
             elif command[0]=='remove':
                 self.remove_song(command[1])
+
+            elif command[0] == 'dump' :
+                self.dump_table()
                 
             elif command[0] == 'q' :
                 sys.exit()

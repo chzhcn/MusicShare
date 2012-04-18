@@ -26,14 +26,14 @@ class Music_Info(object):
     def read_song(self, song_dict, file_dict, index, filepath) :
             song_dict[index] = Song_Info(filepath);
             file_dict[index] = filepath;
-    
+
     def check_song_exists(self,song_dict,filepath):
         new_song_title = Song_Info(filepath).title
-        for index, song_info in song_dict:
+        for index, song_info in song_dict.items():
             if(song_info.title==new_song_title):
                 return True
         return False
-    
+
     def remove_song(self,song_dict,file_dict,filepath):
         old_song_title = Song_Info(filepath).title
         for index, song_info in song_dict.items():

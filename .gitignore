@@ -1,0 +1,7 @@
+*~
+.*
+!.gitignore
+*.pyc
+*_log.txt
+songs/
+songs2/
