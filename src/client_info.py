@@ -30,14 +30,14 @@ class Music_Info(object):
     def check_song_exists(self,song_dict,filepath):
         new_song_title = Song_Info(filepath).title
         for index, song_info in song_dict.items():
-            if(song_info.title==new_song_title):
+            if(song_info.title == new_song_title):
                 return True
         return False
 
     def remove_song(self,song_dict,file_dict,filepath):
         old_song_title = Song_Info(filepath).title
         for index, song_info in song_dict.items():
-            if(song_info.title==old_song_title):
+            if(song_info.title == old_song_title):
                 del song_dict[index]
                 del file_dict[index]
                 #remove from repo folder

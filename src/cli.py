@@ -309,18 +309,6 @@ class client(object):
             self.session_table[message.sender_listening_addr] = session_table_entry
             
             self.session_table_lock.release()       
-                
-
-#            target_music_info = self.music_table[peer_address];
-#            message_music_info = message[1];          
-#            
-#            print message    
-#              
-#            # check delayed message        
-#            if target_music_info.logical_clk_time >= message_music_info.logical_clk_time :
-#                continue
-#            
-#            message_music_info.last_recv_time = time.time()
          
             if message.m_type == 'CCHB' or message.m_type == 'CCD' :
                 
@@ -339,17 +327,16 @@ class client(object):
                     self.send_C_Music(message.sender_listening_addr, 'CCHB') 
                 
             elif message.m_type == 'LIKE' or message.m_type == 'STREAM'  :
-                # print message.receiver_app_start_time
-                # print self.app_start_time
                 if message.receiver_app_start_time == self.app_start_time :
                     print 'app_start_times match'
                     if message.m_type == 'LIKE' and message.song_seq_no in self.music_info.keys() :
+                        self.music_info_lock.acquire()
                         self.music_info[message.song_seq_no].like = self.music_info[message.song_seq_no].like+1
+                        self.music_info_lock.release()
                     elif message.m_type == 'STREAM' :
                         # print 'stream'
                         self.thread_stream = threading.Thread(target=self.stream_music, args=(message,))
                         self.thread_stream.start()
-                        # self.thread_stream = threading.Thread(target=self.stream_music)
                 else :
                     print 'app_start_times don\'t match'
                     self.send_C_Music(message.sender_listening_addr, 'CCHB')
@@ -357,7 +344,6 @@ class client(object):
     def stream_music(self, message) :
         ''' This function handles the streaming request message '''
         print 'in stream_music'
-        # message = message_arg[0]
         song_local_seq =  message.song_seq_no
 
         if song_local_seq in self.file_table.keys() :
@@ -447,20 +433,13 @@ class client(object):
     def client_liveness_check(self):
         liveness_threshold = 20
         while True:
-            # print "presleep"
             time.sleep(15)
-            # print "postsleep"
-            #Go through session table to check last_recv_time
-            # print "prelock"
             self.session_table_lock.acquire()
-            # print "post-lock"
             for k in self.session_table.keys() :
                 if k != self.listening_addr :
                     if(time.time() - self.session_table[k]['last_recv_time'] > liveness_threshold):
                         self.remove_lost_client(k)
-            # print "pre-unlock"
             self.session_table_lock.release()
-            # print "post-unlock"
     
     def remove_lost_client(self,key):
         # Delete client from all the tables
@@ -471,24 +450,23 @@ class client(object):
         del self.session_table[key]
 
     def remove_music_table(self, key):
-        
         self.music_table_lock.acquire()
         del self.music_table[key]
         self.music_table_lock.release()
 
     def open_listener(self):
-            self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
-            self.listening_sock.bind(self.listening_addr)
-            self.listening_addr = self.listening_sock.getsockname()
-            self.listening_sock.listen(5)
+        self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
+        self.listening_sock.bind(self.listening_addr)
+        self.listening_addr = self.listening_sock.getsockname()
+        self.listening_sock.listen(5)
 
     def open_stream_port(self):
-            self.streaming_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.streaming_addr = (socket.gethostbyname(socket.gethostname()), 0)
-            self.streaming_sock.bind(self.streaming_addr)
-            self.streaming_addr = self.streaming_sock.getsockname()
-            self.streaming_sock.listen(5)
+        self.streaming_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.streaming_addr = (socket.gethostbyname(socket.gethostname()), 0)
+        self.streaming_sock.bind(self.streaming_addr)
+        self.streaming_addr = self.streaming_sock.getsockname()
+        self.streaming_sock.listen(5)
 
     def add_song(self,filepath):
         repo_path = os.path.abspath("songs2/") # FIXME: path should be changed later
@@ -520,11 +498,9 @@ class client(object):
             command = command_str.split(' ');
                 
             if command[0] == 'user' :
-                # self.username = self.music_info.username = command[1]
                 self.username = command[1]
                 print self.listening_addr
                 self.init_username()
-                # self.send_SD()
                 
             elif command[0] == 'SD' :
                 self.send_SD()
