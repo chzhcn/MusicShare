@@ -120,9 +120,7 @@ class client(object):
                         self.poll_event.set()
                         self.s.shutdown(socket.SHUT_RDWR)    
                         self.s.close()    
-          
                                    
-                       
         # Give user feedback and close the program   
         if self.connection_state==False:
             print "Secondary Server fails,,.............."
@@ -139,80 +137,75 @@ class client(object):
             while True: 
                 self.hb_event.wait()    
                 if self.connection_state and self.connection_server=='Primary': 
-                                try:
-                                    self.hb = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
-                                    self.hb_enable=True
-                                except:
-                                    if flag:
-                                        print "\n................Primary Server May be down........................"
-                                        flag=False
-                                    self.hb_enable=False
-                                    
+                    try:
+                        self.hb = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
+                        self.hb_enable=True
+                    except:
+                        if flag:
+                            print "\n................Primary Server May be down........................"
+                            flag=False
+                        self.hb_enable=False
                 elif self.connection_state and self.connection_server=='Secondary': 
-                            try:
-                                self.hb = socket.create_connection((CS_Backup_Request_IP, CS_Backup_Request_Port))
-                                self.hb_enable=True
-                            except:
-                                print "\n................Secondary Server May be down........................"
-                                self.hb_enable=False
+                    try:
+                        self.hb = socket.create_connection((CS_Backup_Request_IP, CS_Backup_Request_Port))
+                        self.hb_enable=True
+                    except:
+                        print "\n................Secondary Server May be down........................"
+                        self.hb_enable=False
                                 
                 if self.hb_enable: 
-                            try:
-                                message=('PyHB',self.username,self.logical_time)
-                                self.hb.send(str(message)) 
-                                self.logical_time=self.logical_time+1
-                            except:
-                                print "HB cannot send to server" 
-                            print "\nHeartbeat Message is sent to '%s' %s" % (str(self.connection_server), str(time.ctime()) ) 
-                            self.received_hb[self.connection_server]=time.time()
-                            self.hb_enable=False  
+                    try:
+                        message=('PyHB',self.username,self.logical_time)
+                        self.hb.send(str(message)) 
+                        self.logical_time=self.logical_time+1
+                    except:
+                        print "HB cannot send to server" 
+                    print "\nHeartbeat Message is sent to '%s' %s" % (str(self.connection_server), str(time.ctime()) ) 
+                    self.received_hb[self.connection_server]=time.time()
+                    self.hb_enable=False  
                             # self.hb.shutdown(socket.SHUT_RDWR)
-                            self.hb.close() 
-                        
-                            time.sleep(BEAT_PERIOD)
+                    self.hb.close() 
+                    time.sleep(BEAT_PERIOD)
                             
     def detectLost(self):
         while True:
-                limit = time.time() - CHECK_TIMEOUT
-                self.detectlost_lock.acquire()
-                servername=''
-                for servername in self.received_hb.keys():
-                    if self.received_hb[servername]<= limit:
-    
-                        del self.received_hb[servername] 
-                        
-                        if self.normal_shutdown:
-                            print "------------------I gracefully leave the %s Server --------------------" %servername
-                            self.normal_shutdown=False
-                        else:
-                            print "------------------%s Server get lost--------------------" %servername
+            limit = time.time() - CHECK_TIMEOUT
+            self.detectlost_lock.acquire()
+            servername=''
+            for servername in self.received_hb.keys():
+                if self.received_hb[servername]<= limit:
+                    del self.received_hb[servername] 
+                    if self.normal_shutdown:
+                        print "------------------I gracefully leave the %s Server --------------------" %servername
+                        self.normal_shutdown=False
+                    else:
+                        print "------------------%s Server get lost--------------------" %servername
                             
-                            self.connection_state=False
-                            self.hb_event.clear()
-                            self.connect_server()
+                        self.connection_state=False
+                        self.hb_event.clear()
+                        self.connect_server()
                 self.detectlost_lock.release()
                 time.sleep(CHECK_TIMEOUT) 
                 
     def poll_server(self):
-            t=15
-            while True:
-                self.poll_event.wait()
-                print "Primary is being polled"
-                if self.connection_state and self.connection_server=='Secondary' : 
-                    try:
-                        self.poll = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
-                        pconn=True                
-                    except:
-                        pconn=False
-                        
-                    if pconn:           
-                        print "...................Server state exchange is processing...................."
-                        self.poll.shutdown(socket.SHUT_RDWR)
-                        self.poll.close()
-                        self.normal_shutdown=True
-                        self.connection_state=True;self.connection_server='Primary'
-                        self.poll_event.clear()
-                 
+        t=15
+        while True:
+            self.poll_event.wait()
+            print "Primary is being polled"
+            if self.connection_state and self.connection_server=='Secondary' : 
+                try:
+                    self.poll = socket.create_connection((CS_Primary_Request_IP, CS_Primary_Request_Port))
+                    pconn=True
+                except:
+                    pconn=False
+
+                if pconn:
+                    print "...................Server state exchange is processing...................."
+                    self.poll.shutdown(socket.SHUT_RDWR)
+                    self.poll.close()
+                    self.normal_shutdown=True
+                    self.connection_state=True;self.connection_server='Primary'
+                    self.poll_event.clear()
                     time.sleep(t)
     #                if t<3600:
     #                    t=t+60
@@ -566,4 +559,3 @@ def main() :
 
 if __name__ == '__main__':
     main()
-
