@@ -143,8 +143,8 @@ class Player():
         
     def play_locally(self,song_num):
          filepath=self.traverse_cache_dic(song_num)
-         play_path=self.cache.decrypt_file(filepath)
-         self.play(play_path)
+         #play_path=self.cache.decrypt_file(filepath)
+         self.play(filepath)
         
     def traverse_cache_dic(self,song_num):
      	 for key in self.cache_dic.keys():
@@ -156,7 +156,7 @@ class Player():
             time.sleep(1)
             
     def create_cache_dir(self,song_seq_num):
-        path='/tmp/songs/'    
+        path='/tmp/'    
         if os.path.exists(path):
             filepath=path+str(song_seq_num)
         else:
@@ -187,13 +187,26 @@ class Player():
                 pass
             
             if self.file_stream:
-                self.cache.encrypt_file(filepath)
+                 #............For temp file...............
+                temp_filepath=self.cache.temp_file(filepath)
                 print "Caching is finished"
                 self.file_stream=False
-                self.cache_dic[song_seq_num]=os.path.splitext(filepath)[0]+'.enc'
+                self.cache_dic[song_seq_num]=temp_filepath
                 print self.cache_dic
                 os.remove(filepath)
                 break
+            
+                #............For encrypted file...............
+                
+#                self.cache.encrypt_file(filepath)
+#                print "Caching is finished"
+#                self.file_stream=False
+#                self.cache_dic[song_seq_num]=os.path.splitext(filepath)[0]+'.enc'
+#                print self.cache_dic
+#                os.remove(filepath)
+#                break          
+                #decrypt_file(key,en_filepath)
+                #print "dencryption is finished"
 
             time.sleep(1)
             
