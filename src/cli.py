@@ -471,6 +471,7 @@ class client(object):
         self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
         self.listening_sock.bind(self.listening_addr)
         self.listening_addr = self.listening_sock.getsockname()
+        self.port=self.listening_addr[1]
         self.listening_sock.listen(5)
 
     def open_stream_port(self):
