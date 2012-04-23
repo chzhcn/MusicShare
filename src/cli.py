@@ -14,16 +14,6 @@ import select;
 import shutil
 import os
 
-import gobject 
-import threading 
-import re 
-import time  
-import glib, sys, os, fcntl 
-import pygst
-pygst.require("0.10")
-import gst
-import socket,threading,thread,sys,os,time
-gobject.threads_init()
 
 from client_info import Music_Info
 from Client_Message import Client_Message
