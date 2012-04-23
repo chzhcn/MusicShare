@@ -14,10 +14,24 @@ import select;
 import shutil
 import os
 
+import gobject 
+import threading 
+import re 
+import time  
+import glib, sys, os, fcntl 
+import pygst
+pygst.require("0.10")
+import gst
+import socket,threading,thread,sys,os,time
+gobject.threads_init()
+
 from client_info import Music_Info
 from Client_Message import Client_Message
 from Client_Message import Client_Music_Message
 from Client_Message import Client_Request_Message
+
+from Caching import Caching
+from Player import Player
 
 #Primary Server
 CS_Primary_Request_IP = '127.0.0.1'; CS_Primary_Request_Port = 12345;
@@ -79,6 +93,7 @@ class client(object):
            
         self.thread_client_liveness = threading.Thread(target=self.client_liveness_check)
         self.thread_client_liveness.start()
+        self.player=Player()
 
     def connect_server(self):
         # Try Primary Server
@@ -354,8 +369,10 @@ class client(object):
             print song_local_path
             print requester_ip
             print requester_stream_port
+            self.player.sender_init(message.sender_listening_addr[0],message.sender_listening_addr[1],song_local_path)
         else :
             # FIXME: requested song is not there; should reply with rejection
+            print "Song is not in current peer now"
             pass
         pass
             
@@ -395,6 +412,11 @@ class client(object):
 
     def send_stream(self, receiver_key, song_seq_num):
         self.send_request('STREAM', receiver_key, song_seq_num)
+        
+        self.stream_ip=receiver_key[0];
+        self.stream_port=int(receiver_key[1]);
+        self.stream_song_num=int(song_seq_num)     
+        self.player.receiver_init(self.stream_ip,self.port,self.stream_song_num)
             
     def send_C_Music(self, address, m_type):
         self.logical_clk_lock.acquire()
@@ -525,7 +547,15 @@ class client(object):
                 
             elif command[0] == 'q' :
                 sys.exit()
-                
+            elif command[0]=='pause':
+                self.player.pause()
+            elif command[0]=='resume':
+                self.player.resume()
+            elif command[0]=='stop':
+                self.player.stop()  
+            elif command[0]=='replay':
+                if not self.player.check_cache_dic(self.stream_song_num):
+                    self.send_stream((self.stream_ip,self.stream_port),self.stream_song_num)
             else :
                 print "command not recognized"
 
