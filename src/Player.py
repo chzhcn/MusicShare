@@ -14,8 +14,8 @@ import shutil
 import os
 
 
-import pygst
-pygst.require('0.10')
+import gobject
+gobject.threads_init()
 import gst
 import thread
 
