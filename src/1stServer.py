@@ -11,12 +11,20 @@ import time
 import ast
 import threading,sys, os, cPickle,string
 
+def getNetworkIp():   
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
+    s.connect(('google.com', 0))    
+    return s.getsockname()[0] 
+
+
 logging.basicConfig(level=logging.DEBUG,format='%(name)s: %(message)s',)
 CHECK_TIMEOUT=15
-address = ('127.0.0.1', 12345) # let the kernel give us a port
+address = (str(getNetworkIp()), 12345) # let the kernel give us a port
+print "the listening address is ",address
 UTM=[]
-heartbeats_test={}
 v=[]
+heartbeats_test={}
+
 
 class VectorClock():
     def __init__(self,num,vid):
@@ -390,7 +398,7 @@ class EchoClient(asyncore.dispatcher):
             try:
                 self.connect((self.host, self.port))
             except:
-                print "I lost",time.ctime()
+                print "Disconnected to Secondary Server",time.ctime()
                 #self.hb_event.clear()
             #time.sleep(2)   
                 
@@ -493,10 +501,13 @@ class EchoClient(asyncore.dispatcher):
         return                                               
         #self.logger.debug('handle_read() -> (%d) "%s"', len(data), data)
         #self.received_data.append(data)
+        
 
             
     
 def main():
+    
+    
     vector=VectorClock(2,0)
     vector.init()
     client = EchoClient(vector)

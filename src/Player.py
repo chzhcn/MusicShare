@@ -16,8 +16,12 @@ import os
 
 import gobject
 gobject.threads_init()
+import pygst
+pygst.require("0.10")
 import gst
 import thread
+
+import platform
 
 from Caching import Caching
 
@@ -26,108 +30,114 @@ class Player():
     def __init__(self):
     	self.cache_dic={}
     	self.cache=Caching()
+        self.systype= platform.system()
         pass
+    
     def receiver_init(self,ip,port,song_seq_num):
-
+        
+        self.send_sys_type="windows"
+        
         self.cache_filepath=self.create_cache_dir(song_seq_num)
-        self.pipeline = gst.Pipeline("server")
-        self.filepipeline = gst.Pipeline("fileserver")
-
-        self.tcpsrc = gst.element_factory_make("tcpserversrc", "source")
-     
-        self.tcpsrc.set_property("host", str(ip))
-        self.tcpsrc.set_property("port", int(port)+10)
         
-        self.tcpsrc1 = gst.element_factory_make("tcpserversrc", "source1")
-   
-        self.tcpsrc1.set_property("host", str(ip))
-        self.tcpsrc1.set_property("port", int(port)+11)
-
-        self.decode = gst.element_factory_make("decodebin", "decode")
-        self.decode.connect("new-decoded-pad", self.new_decode_pad)
-
+        if self.systype=="Linux":
         
-        self.decode1 = gst.element_factory_make("decodebin", "decode1")
-        self.decode1.connect("new-decoded-pad", self.new_decode_pad_file)
-
-        self.convert = gst.element_factory_make("audioconvert", "convert")
- 
-        
-        self.convert1 = gst.element_factory_make("audioconvert", "convert1")
-
-        self.sink = gst.element_factory_make("alsasink", "sink")
-
-        
-        self.filesink = gst.element_factory_make("filesink")
-        
-       
-                    
+            self.pipeline = gst.Pipeline("server")      
+            self.tcpsrc = gst.element_factory_make("tcpserversrc", "source")
+            self.tcpsrc.set_property("host", str(ip))
+            self.tcpsrc.set_property("port", int(port)+10)
+            self.decode = gst.element_factory_make("decodebin", "decode")
+            self.decode.connect("new-decoded-pad", self.new_decode_pad)
+            self.convert = gst.element_factory_make("audioconvert", "convert")
+            self.sink = gst.element_factory_make("alsasink", "sink")
             
-        self.filesink.set_property("location", self.cache_filepath)
-        
-        
+            self.pipeline.add(self.tcpsrc,self.decode,self.convert,self.sink)
+            gst.element_link_many(self.tcpsrc,self.decode)
+            gst.element_link_many(self.convert,self.sink) 
             
-        
-        self.queue1 = gst.element_factory_make("queue")
-        
-        self.pipeline.add(self.tcpsrc,self.decode,self.convert,self.sink) 
-        self.filepipeline.add(self.tcpsrc1,self.filesink) 
-  
-                       
-        gst.element_link_many(self.tcpsrc,self.decode)
-        gst.element_link_many(self.convert,self.sink)
-        
-        gst.element_link_many(self.tcpsrc1,self.filesink)
-        
+            self.filepipeline = gst.Pipeline("fileserver")
+            self.tcpsrc1 = gst.element_factory_make("tcpserversrc", "source1")
+            self.tcpsrc1.set_property("host", str(ip))
+            self.tcpsrc1.set_property("port", int(port)+11)        
+            self.decode1 = gst.element_factory_make("decodebin", "decode1")
+            self.decode1.connect("new-decoded-pad", self.new_decode_pad_file)       
+            self.convert1 = gst.element_factory_make("audioconvert", "convert1")  
+            self.filesink = gst.element_factory_make("filesink")
+            self.filesink.set_property("location", self.cache_filepath)
+            
+            self.filepipeline.add(self.tcpsrc1,self.filesink) 
+            gst.element_link_many(self.tcpsrc1,self.filesink)
+            
+    
+            self.song_playing=True
+            self.pipeline.set_state(gst.STATE_PLAYING) 
+            self.filepipeline.set_state(gst.STATE_PLAYING)
+    
+           
+            
+            self.thread_song_play=threading.Thread(target=self.song_loop)
+            self.thread_song_play.start()
+            
+            self.thread_caching_song=threading.Thread(target=self.cache_song,args=(self.cache_filepath,song_seq_num,))
+            self.thread_caching_song.start()
+           
+            self.bus = self.pipeline.get_bus()
+            self.bus.enable_sync_message_emission()
+            self.bus.add_signal_watch()
+            self.bus.connect('message::tag', self.on_tag)
+        elif self.systype=="Windows":
 
-        self.song_playing=True
-        self.pipeline.set_state(gst.STATE_PLAYING) 
-        self.filepipeline.set_state(gst.STATE_PLAYING)
-
-       
-        
-        self.thread_song_play=threading.Thread(target=self.song_loop)
-        self.thread_song_play.start()
-        
-        self.thread_caching_song=threading.Thread(target=self.cache_song,args=(self.cache_filepath,song_seq_num,))
-        self.thread_caching_song.start()
-   
-         
-        
-        self.bus = self.pipeline.get_bus()
-        self.bus.enable_sync_message_emission()
-        self.bus.add_signal_watch()
-        self.bus.connect('message::tag', self.on_tag)
+            commandpath="udpsrc  uri=udp://127.0.0.1:60001  caps=\"application/x-rtp, media=(string)audio, clock-rate=(int)90000, encoding-name=(string)MPA, payload=(int)96\" ! rtpmpadepay ! mad ! audioconvert ! directsoundsink sync=true" 
+            commandpath="udpsrc  uri=udp://127.0.0.1:60001 ! mad ! audioconvert ! directsoundsink sync=true "
+            self.pipeline = gst.parse_launch(commandpath)   
+            self.pipeline.set_state(gst.STATE_PLAYING)
+            print "Windows are receiving" 
+            self.song_playing=True
+            self.thread_song_play=threading.Thread(target=self.song_loop)
+            self.thread_song_play.start()  
+            
         
 
     def sender_init(self,ip,port,filepath):
 
+        if self.systype=="Linux":
+            
+            self.pipeline = gst.Pipeline("client")
+            self.src = gst.element_factory_make("filesrc", "source")
+            self.src.set_property("location", filepath)
+            self.pipeline.add(self.src)
+            self.client = gst.element_factory_make("tcpclientsink", "client")
+            self.pipeline.add(self.client)
+            self.client.set_property("host", str(ip))
+            self.client.set_property("port", int(port)+10)
+            self.src.link(self.client)
+            
+            self.pipeline1 = gst.Pipeline("fileclient")
+            self.src1 = gst.element_factory_make("filesrc", "source1")
+            self.src1.set_property("location", filepath)
+            self.pipeline1.add(self.src1)
+            self.client1 = gst.element_factory_make("tcpclientsink", "client1")
+            self.pipeline1.add(self.client1)
+            self.client1.set_property("host", str(ip))
+            self.client1.set_property("port", int(port)+11)
+            self.src1.link(self.client1)
+               
+            time.sleep(2)
+            self.pipeline.set_state(gst.STATE_PLAYING)
+            self.pipeline1.set_state(gst.STATE_PLAYING)
         
-        self.pipeline = gst.Pipeline("client")
-        self.src = gst.element_factory_make("filesrc", "source")
-        self.src.set_property("location", filepath)
-        self.pipeline.add(self.src)
-        self.client = gst.element_factory_make("tcpclientsink", "client")
-        self.pipeline.add(self.client)
-        self.client.set_property("host", str(ip))
-        self.client.set_property("port", int(port)+10)
-        self.src.link(self.client)
+        elif self.systype=="Windows": 
+            commandpath="filesrc location=C:/song/1.mp3 ! ffdemux_mp3 ! rtpmpapay ! udpsink port=60001 host= 127.0.0.1 "
+            commandpath="filesrc location=C:/song/1.mp3 ! ffdemux_mp3 ! udpsink port=60001 host= 127.0.0.1 "
+            self.pipeline = gst.parse_launch(commandpath)   
+            time.sleep(1)
+            self.pipeline.set_state(gst.STATE_PLAYING)
+            print " Windows are sending"
+            self.song_playing=True
+            self.thread_song_play=threading.Thread(target=self.song_loop)
+            self.thread_song_play.start()  
         
-        self.pipeline1 = gst.Pipeline("fileclient")
-        self.src1 = gst.element_factory_make("filesrc", "source1")
-        self.src1.set_property("location", filepath)
-        self.pipeline1.add(self.src1)
-        self.client1 = gst.element_factory_make("tcpclientsink", "client1")
-        self.pipeline1.add(self.client1)
-        self.client1.set_property("host", str(ip))
-        self.client1.set_property("port", int(port)+11)
-        self.src1.link(self.client1)
+            
         
-
-        
-        time.sleep(2)
-        self.pipeline.set_state(gst.STATE_PLAYING)
-        self.pipeline1.set_state(gst.STATE_PLAYING)
         
         
 
@@ -207,8 +217,9 @@ class Player():
 
             time.sleep(1)
             
-    def play(self,filepath):
-        commandpath="filesrc location=\"%s\" ! mad ! audioconvert ! alsasink"%filepath
+    def play(self,filepath='C:/song/1.mp3'):
+        #commandpath="playbin uri=http://mp3.kisspopo.com/mp3/2012/02/065.mp3"
+        commandpath="filesrc location=\"%s\" ! mad ! audioconvert ! directsoundsink " %filepath
         self.pipeline = gst.parse_launch(commandpath)   
         self.pipeline.set_state(gst.STATE_PLAYING)
         print "Play the song locally" 
