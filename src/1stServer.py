@@ -19,7 +19,7 @@ def getNetworkIp():
     s.connect(('google.com', 0))    
     return s.getsockname()[0] 
 
-address = (str(getNetworkIp()), 12345) # let the kernel give us a port
+address = ('127.0.0.1', 12345) # let the kernel give us a port
 print "Listening address is ",address
 UTM=[]
 heartbeats_test={}
@@ -261,7 +261,8 @@ class EchoHandler(asyncore.dispatcher):
 
 
 class Monitor():
-    def __init__(self,vector):
+    def __init__(self,vector,client):
+        self.client=client
         self.v=vector
         self.lock=threading.Lock()
         self.user_lost=False
@@ -510,7 +511,7 @@ def main():
     client = EchoClient(vector)
 
     server = EchoServer(address,vector,client)
-    monitor=Monitor(vector)
+    monitor=Monitor(vector,client)
     
     asyncore.loop()
 
