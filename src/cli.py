@@ -14,16 +14,6 @@ import select;
 import shutil
 import os
 
-import gobject 
-import threading 
-import re 
-import time  
-import glib, sys, os, fcntl 
-import pygst
-pygst.require("0.10")
-import gst
-import socket,threading,thread,sys,os,time
-gobject.threads_init()
 
 from client_info import Music_Info
 from Client_Message import Client_Message
@@ -481,6 +471,7 @@ class client(object):
         self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
         self.listening_sock.bind(self.listening_addr)
         self.listening_addr = self.listening_sock.getsockname()
+        self.port=self.listening_addr[1]
         self.listening_sock.listen(5)
 
     def open_stream_port(self):
@@ -556,6 +547,9 @@ class client(object):
             elif command[0]=='replay':
                 if not self.player.check_cache_dic(self.stream_song_num):
                     self.send_stream((self.stream_ip,self.stream_port),self.stream_song_num)
+            elif command[0]== 'play_locally':
+                local_song_path=command[1]
+                self.player.resume(local_song_path)
             else :
                 print "command not recognized"
 
