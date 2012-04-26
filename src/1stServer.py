@@ -18,7 +18,7 @@ def getNetworkIp():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
     s.connect(('google.com', 0))    
     return s.getsockname()[0] 
-
+#1st server is updat
 address = ('127.0.0.1', 12345) # let the kernel give us a port
 print "Listening address is ",address
 UTM=[]
