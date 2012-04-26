@@ -13,7 +13,14 @@ import threading,sys, os, cPickle,string
 
 logging.basicConfig(level=logging.DEBUG,format='%(name)s: %(message)s',)
 CHECK_TIMEOUT=15
+
+def getNetworkIp():   
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
+    s.connect(('google.com', 0))    
+    return s.getsockname()[0] 
+#1st server is updat
 address = ('127.0.0.1', 12345) # let the kernel give us a port
+print "Listening address is ",address
 UTM=[]
 heartbeats_test={}
 v=[]
@@ -157,7 +164,7 @@ class EchoHandler(asyncore.dispatcher):
             data = self.recv(self.chunk_size)
         except:
             print "connection lost "
-			
+            
         print "yreceived data" , data,self.addr
         if data:
             try:
@@ -254,7 +261,8 @@ class EchoHandler(asyncore.dispatcher):
 
 
 class Monitor():
-    def __init__(self,vector):
+    def __init__(self,vector,client):
+        self.client=client
         self.v=vector
         self.lock=threading.Lock()
         self.user_lost=False
@@ -314,6 +322,7 @@ class EchoClient(asyncore.dispatcher):
         self.connection_state=False
         self.fail_num=0
         self.connection_state=False
+        
 #        self.v=VectorClock(2,0)
         self.v=v
         #print "My vector from EchoClient is ",self.v.toString()
@@ -502,7 +511,7 @@ def main():
     client = EchoClient(vector)
 
     server = EchoServer(address,vector,client)
-    monitor=Monitor(vector)
+    monitor=Monitor(vector,client)
     
     asyncore.loop()
 

@@ -189,8 +189,8 @@ class client(object):
                         self.connection_state=False
                         self.hb_event.clear()
                         self.connect_server()
-                self.detectlost_lock.release()
-                time.sleep(CHECK_TIMEOUT) 
+            self.detectlost_lock.release()
+            time.sleep(1) 
                 
     def poll_server(self):
         t=15
@@ -211,7 +211,7 @@ class client(object):
                     self.normal_shutdown=True
                     self.connection_state=True;self.connection_server='Primary'
                     self.poll_event.clear()
-                    time.sleep(t)
+            time.sleep(t)
     #                if t<3600:
     #                    t=t+60
     #                else:
