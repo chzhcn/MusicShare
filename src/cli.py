@@ -305,7 +305,10 @@ class client(object):
             data = peer_socket.recv(8192)
             
             peer_socket.close()
-            message = pickle.loads(data);
+            try:
+                message = pickle.loads(data);
+            except:
+                pass
             
             print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
 
