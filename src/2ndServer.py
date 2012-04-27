@@ -15,6 +15,12 @@ logging.basicConfig(level=logging.DEBUG,
                         format='%(name)s: %(message)s',
                         )
 CHECK_TIMEOUT=30
+
+def getNetworkIp():   
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
+    s.connect(('google.com', 0))    
+    return s.getsockname()[0] 
+#address = (str(getNetworkIp()),12347)
 address = ('127.0.0.1',12347) # let the kernel give us a port
 UTM=[]
 heartbeats_test={}
@@ -61,7 +67,7 @@ class EchoServer(asyncore.dispatcher):
     def handle_accept(self):
         # Called when a client connects to our socket
         client_info = self.accept()
-        self.logger.debug('handle_accept() -> %s', client_info[1])
+        #self.logger.debug('handle_accept() -> %s', client_info[1])
         EchoHandler(sock=client_info[0],vector=self.v)
         return
     
@@ -140,7 +146,7 @@ class EchoHandler(asyncore.dispatcher):
         except:
             print "connection lost "
 			
-        print "yreceived data" , data,self.addr
+        print "2nd received data" , data,'from address',self.addr
         if data:
             try:
                                                         newdata=ast.literal_eval(data)
