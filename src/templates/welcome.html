@@ -1,0 +1,47 @@
+<!doctype html>
+<head>
+<link rel="stylesheet" type="text/css" href="../static/style.css" />
+<meta http-equiv="refresh" content="5" >
+<title>Hello from Music Share</title>
+</head>
+<form action="{{url_for('refresh')}}" method=post>
+{% if name %}
+  <h1>Welcome {{ name }}!</h1>
+{% else %}
+  <h1>Hello World!</h1>
+{% endif %}
+<div>
+<input type="file" name="newsong">Add New Song</input>
+</div>
+<table id="songs">
+<thead>
+		<th>Song Title</th>
+		<th>Album</th>
+		<th>Artist</th>
+        <th>Duration</th>
+        <th>Year</th>
+	</thead>
+{% for user,song_info in music_table.items() %}
+    {% for seq,song in song_info.items() %}
+    <tr>
+    <td>
+    {{song.title}}
+    </td>
+    <td>
+    {{song.album}}
+    </td>
+    <td>
+    {{song.artist}}
+    </td>
+    <td>
+    {{song.length/60}}
+    </td>
+    <td>
+    {{song.year}}
+    </td>
+    </tr>
+    {% endfor %}
+{% endfor %}
+</table>
+<div><input id="refresh" type="Submit" value="Refresh"/></div>
+</form>
