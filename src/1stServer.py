@@ -158,7 +158,7 @@ class EchoHandler(asyncore.dispatcher):
         except:
             print "connection lost "
             
-        print "1st received data" , data,self.addr
+        print "1st received data" , data,'from address',self.addr
         if data:
             try:
                                                         newdata=ast.literal_eval(data)
@@ -309,11 +309,11 @@ class EchoClient(asyncore.dispatcher):
     """Sends messages to the server and receives responses.
     """
     
-    def __init__(self,v):
+    def __init__(self,v,address):
         global UTM
         self.chunk_size=8192
         self.message=str(('SSR',UTM))
-        self.host='127.0.0.1'
+        self.host=address[0]
         self.port=12347
         self.connection_state=False
         self.fail_num=0
@@ -490,7 +490,7 @@ class EchoClient(asyncore.dispatcher):
 def main():
     vector=VectorClock(2,0)
     vector.init()
-    client = EchoClient(vector)
+    client = EchoClient(vector,address)
 
     server = EchoServer(address,vector,client)
     monitor=Monitor(vector,client)
