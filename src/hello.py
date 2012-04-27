@@ -1,4 +1,5 @@
 from flask import Flask,url_for,render_template,request
+from werkzeug import secure_filename
 import cli
 import threading
 app = Flask(__name__)
@@ -28,6 +29,9 @@ def refresh2():
 def refresh():
     music_table={}
     if request.method == 'POST':
+        f = request.files['newsong']
+        print f.filename
+        f.save("D:\workspace\MusicShare\songs\\"+secure_filename(f.filename))
         return render_template("welcome.html",name=c.username,music_table=c.music_table)
     else:
         return render_template("welcome.html",name=c.username,music_table=c.music_table)
@@ -43,6 +47,7 @@ with app.test_request_context('/hello', method='POST'):
     assert request.method == 'POST'
 
 if __name__ == '__main__':
+    app.debug= True
     app.run('127.0.0.1',1234)
     
     
