@@ -17,9 +17,12 @@ def login():
         name = request.form['username']
         c.username = name
         c.init_username()
-        return render_template("welcome.html",name=c.username,music_table=c.music_table)
+
+    return render_template("welcome.html",name=c.username,music_table=c.music_table)
+
 def refresh1():
     return render_template("welcome.html",name=c.username,music_table=c.music_table)
+
 def refresh2():
     while True:
         refresh1()
@@ -47,7 +50,5 @@ with app.test_request_context('/hello', method='POST'):
     assert request.method == 'POST'
 
 if __name__ == '__main__':
-    app.debug= True
+    app.debug = True
     app.run('127.0.0.1',1234)
-    
-    

@@ -83,7 +83,13 @@ class client(object):
            
         self.thread_client_liveness = threading.Thread(target=self.client_liveness_check)
         self.thread_client_liveness.start()
+        
         self.player=Player()
+        
+    def getNetworkIp(self):   
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
+        s.connect(('google.com', 0))    
+        return s.getsockname()[0] 
 
     def connect_server(self):
         # Try Primary Server
@@ -189,8 +195,8 @@ class client(object):
                         self.connection_state=False
                         self.hb_event.clear()
                         self.connect_server()
-                self.detectlost_lock.release()
-                time.sleep(CHECK_TIMEOUT) 
+            self.detectlost_lock.release()
+            time.sleep(1) 
                 
     def poll_server(self):
         t=15
@@ -211,16 +217,23 @@ class client(object):
                     self.normal_shutdown=True
                     self.connection_state=True;self.connection_server='Primary'
                     self.poll_event.clear()
-                    time.sleep(t)
+            time.sleep(t)
     #                if t<3600:
     #                    t=t+60
     #                else:
-    #                    t=3600            
-                
+    #                    t=3600    
+            
+    def print_list(self,data):
+        print ".......................User Table is.....................\n"
+        num=1;
+        userlist=ast.literal_eval(data)
+        for i in userlist[1]:
+            print num,':',i[0],':',i[1],':',i[2],'\n'
+            num=num+1
+                        
 
     def init_username(self):
         addr=self.listening_addr;
-                
         message=('CHB', addr[0], addr[1], self.username)
         try :
             self.s.sendall(str(message))
@@ -238,8 +251,8 @@ class client(object):
                 print "receive from server error"
                 print type(inst)
                 print inst
-                self.init_username_error()
-            print "the data is ",data        
+                self.init_username_error()     
+            self.print_list(data)       
             if len(data) != 0:
                 print '2'
                 
@@ -292,7 +305,10 @@ class client(object):
             data = peer_socket.recv(8192)
             
             peer_socket.close()
-            message = pickle.loads(data);
+            try:
+                message = pickle.loads(data);
+            except:
+                pass
             
             print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
 
@@ -348,17 +364,18 @@ class client(object):
 
     def stream_music(self, message) :
         ''' This function handles the streaming request message '''
-        print 'in stream_music'
         song_local_seq =  message.song_seq_no
 
         if song_local_seq in self.file_table.keys() :
             song_local_path = self.file_table[song_local_seq]
             requester_ip = message.sender_listening_addr[0]
             requester_stream_port = message.streaming_port
-            print song_local_seq
-            print song_local_path
-            print requester_ip
-            print requester_stream_port
+            print "-----------------------------Stream Info-------------------------------"
+            print "request song_num :",song_local_seq
+            print "request song path :",song_local_path
+            #print requester_stream_port
+            print "send stream to ip :",requester_ip
+            print "send stream to port :", message.sender_listening_addr[1]
             self.player.sender_init(message.sender_listening_addr[0],message.sender_listening_addr[1],song_local_path)
         else :
             # FIXME: requested song is not there; should reply with rejection
@@ -392,7 +409,7 @@ class client(object):
         except Exception as inst:
             print type(inst)
             print inst
-            print "send_like() exception"
+            print "send_request() exception"
         finally:
             self.logical_clk_lock.release()
             self.music_info_lock.release()
@@ -406,7 +423,17 @@ class client(object):
         self.stream_ip=receiver_key[0];
         self.stream_port=int(receiver_key[1]);
         self.stream_song_num=int(song_seq_num)     
-        self.player.receiver_init(self.stream_ip,self.port,self.stream_song_num)
+        self.ip=self.getNetworkIp()  
+        
+        #print "self.stream_ip",self.stream_ip
+        #print "self.stream_port",self.stream_port
+        print ".........................Stream Info..................................."
+        print "request song num :",self.stream_song_num 
+        print "receive stream ip :",self.ip
+        print "receive stream port :",self.port
+         
+
+        self.player.receiver_init(self.ip,self.port,self.stream_song_num)
             
     def send_C_Music(self, address, m_type):
         self.logical_clk_lock.acquire()
@@ -468,7 +495,8 @@ class client(object):
 
     def open_listener(self):
         self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
+        #self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
+        self.listening_addr = (str(self.getNetworkIp()), 0)       
         self.listening_sock.bind(self.listening_addr)
         self.listening_addr = self.listening_sock.getsockname()
         self.port=self.listening_addr[1]
@@ -512,7 +540,7 @@ class client(object):
                 
             if command[0] == 'user' :
                 self.username = command[1]
-                print self.listening_addr
+                print "the self.listening_address is ,",self.listening_addr
                 self.init_username()
                 
             elif command[0] == 'SD' :

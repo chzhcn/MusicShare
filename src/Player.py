@@ -16,6 +16,8 @@ import os
 
 import gobject
 gobject.threads_init()
+import pygst
+pygst.require('0.10')
 import gst
 import thread
 
@@ -24,60 +26,40 @@ from Caching import Caching
 
 class Player():
     def __init__(self):
-    	self.cache_dic={}
-    	self.cache=Caching()
+        self.cache_dic={}
+        self.cache=Caching()
+        self.cache_filepath=''
         pass
     def receiver_init(self,ip,port,song_seq_num):
-
-        self.cache_filepath=self.create_cache_dir(song_seq_num)
+        
+        self.cache_filepath=self.get_plain_cachefilepath(song_seq_num)
+        #print "cache location is " ,self.cache_filepath
+        
         self.pipeline = gst.Pipeline("server")
-        self.filepipeline = gst.Pipeline("fileserver")
-
         self.tcpsrc = gst.element_factory_make("tcpserversrc", "source")
-     
         self.tcpsrc.set_property("host", str(ip))
         self.tcpsrc.set_property("port", int(port)+10)
-        
-        self.tcpsrc1 = gst.element_factory_make("tcpserversrc", "source1")
-   
-        self.tcpsrc1.set_property("host", str(ip))
-        self.tcpsrc1.set_property("port", int(port)+11)
-
         self.decode = gst.element_factory_make("decodebin", "decode")
         self.decode.connect("new-decoded-pad", self.new_decode_pad)
-
+        self.convert = gst.element_factory_make("audioconvert", "convert")
+        self.sink = gst.element_factory_make("alsasink", "sink")
+        self.pipeline.add(self.tcpsrc,self.decode,self.convert,self.sink)
+        gst.element_link_many(self.tcpsrc,self.decode)
+        gst.element_link_many(self.convert,self.sink) 
         
+        
+        self.filepipeline = gst.Pipeline("fileserver")
+        self.tcpsrc1 = gst.element_factory_make("tcpserversrc", "source1")
+        self.tcpsrc1.set_property("host", str(ip))
+        self.tcpsrc1.set_property("port", int(port)+11)  
         self.decode1 = gst.element_factory_make("decodebin", "decode1")
         self.decode1.connect("new-decoded-pad", self.new_decode_pad_file)
-
-        self.convert = gst.element_factory_make("audioconvert", "convert")
- 
-        
         self.convert1 = gst.element_factory_make("audioconvert", "convert1")
-
-        self.sink = gst.element_factory_make("alsasink", "sink")
-
-        
         self.filesink = gst.element_factory_make("filesink")
-        
-       
-                    
-            
-        self.filesink.set_property("location", self.cache_filepath)
-        
-        
-            
-        
-        self.queue1 = gst.element_factory_make("queue")
-        
-        self.pipeline.add(self.tcpsrc,self.decode,self.convert,self.sink) 
-        self.filepipeline.add(self.tcpsrc1,self.filesink) 
-  
-                       
-        gst.element_link_many(self.tcpsrc,self.decode)
-        gst.element_link_many(self.convert,self.sink)
-        
+        self.filesink.set_property("location", self.cache_filepath) 
+        self.filepipeline.add(self.tcpsrc1,self.filesink)         
         gst.element_link_many(self.tcpsrc1,self.filesink)
+        print "receive filesink address is ",str(ip),':',int(port)+11
         
 
         self.song_playing=True
@@ -89,11 +71,11 @@ class Player():
         self.thread_song_play=threading.Thread(target=self.song_loop)
         self.thread_song_play.start()
         
+        
         self.thread_caching_song=threading.Thread(target=self.cache_song,args=(self.cache_filepath,song_seq_num,))
         self.thread_caching_song.start()
    
-         
-        
+   
         self.bus = self.pipeline.get_bus()
         self.bus.enable_sync_message_emission()
         self.bus.add_signal_watch()
@@ -122,7 +104,7 @@ class Player():
         self.client1.set_property("host", str(ip))
         self.client1.set_property("port", int(port)+11)
         self.src1.link(self.client1)
-        
+        print "send filesink address is ",str(ip),':',int(port)+11
 
         
         time.sleep(2)
@@ -144,15 +126,15 @@ class Player():
          self.play(filepath)
         
     def traverse_cache_dic(self,song_num):
-     	 for key in self.cache_dic.keys():
-     	 	if key==song_num:
-     	 		return self.cache_dic[key]
+          for key in self.cache_dic.keys():
+              if key==song_num:
+                  return self.cache_dic[key]
   
     def song_loop(self):
         while self.song_playing:
             time.sleep(1)
             
-    def create_cache_dir(self,song_seq_num):
+    def get_plain_cachefilepath(self,song_seq_num):
         path='/tmp/'    
         if os.path.exists(path):
             filepath=path+str(song_seq_num)
@@ -169,16 +151,15 @@ class Player():
         compare_size=0
         size=0
         self.file_stream=False
-        while True:
-           
+        while True: 
+            #print "I am checking cache now"   
             compare_size=size
             try:
                 size=os.path.getsize(filepath)
             except:
                 pass
                 
-            if size-compare_size==0 and size!=0:
-               
+            if size-compare_size==0 and size!=0:        
                 self.file_stream=True
             else:
                 pass
@@ -186,12 +167,12 @@ class Player():
             if self.file_stream:
                  #............For temp file...............
                 temp_filepath=self.cache.temp_file(filepath)
-                print "Caching is finished"
                 self.file_stream=False
                 self.cache_dic[song_seq_num]=temp_filepath
-                print self.cache_dic
+                print "Caching is finished :",self.cache_dic
                 os.remove(filepath)
                 break
+            time.sleep(1)
             
                 #............For encrypted file...............
                 
@@ -205,7 +186,7 @@ class Player():
                 #decrypt_file(key,en_filepath)
                 #print "dencryption is finished"
 
-            time.sleep(1)
+           
             
     def play(self,filepath):
         commandpath="filesrc location=\"%s\" ! mad ! audioconvert ! alsasink"%filepath
