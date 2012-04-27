@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="../static/style.css" />
+<title>Hello from Flask</title>
+</head>
+<body>
+<h1> Welcome to Music Share </h1>
+<img src="../static/pic.jpg"  style="margin:auto;display:block;"  />
+<div>
+<h3> Please enter your user name: </h3><br>
+<form action="{{ url_for('login') }}" method=post>
+<input type="text" name="username"/><br><br>
+<input type="submit" value="Submit" />
+</form>
+</div>
+</body>
+</html>
