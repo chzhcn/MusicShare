@@ -4,9 +4,15 @@ import cli
 import threading
 app = Flask(__name__)
 c = cli.client()
+
 @app.route('/')
 def index():
-    return render_template('hello.html')
+    return render_template('mainpage.html')
+
+@app.route('/like/<int:seqno>&<ip>&<int:port>')
+def like(seqno,ip,port):
+    c.send_like((ip,port),seqno)
+    return render_template("welcome.html",name=c.username,music_table=c.music_table)
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -17,6 +23,17 @@ def login():
         name = request.form['username']
         c.username = name
         c.init_username()
+
+    return render_template("welcome.html",name=c.username,music_table=c.music_table)
+
+@app.route('/login/<receiver_ip>&<int:receiver_port>&<int:song_seq_num>', methods=['POST', 'GET'])
+def stream(receiver_ip, receiver_port, song_seq_num) :
+    print type(receiver_ip), type(receiver_port), type(song_seq_num)
+    print receiver_ip, receiver_port, song_seq_num
+    if c.player.song_playing == False :
+        c.send_stream((receiver_ip, receiver_port), song_seq_num)
+        print 'called stream'
+        # c.in_play = True
 
     return render_template("welcome.html",name=c.username,music_table=c.music_table)
 
@@ -38,6 +55,7 @@ def refresh():
         return render_template("welcome.html",name=c.username,music_table=c.music_table)
     else:
         return render_template("welcome.html",name=c.username,music_table=c.music_table)
+
 @app.route('/user/<username>')
 def show_user_profile(username):
     # show the user profile for that user
@@ -51,4 +69,4 @@ with app.test_request_context('/hello', method='POST'):
 
 if __name__ == '__main__':
     app.debug = True
-    app.run('127.0.0.1',1234)
+    app.run('127.0.0.1', 1235)
