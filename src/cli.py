@@ -237,8 +237,10 @@ class client(object):
         message=('CHB', addr[0], addr[1], self.username)
         try :
             self.s.sendall(str(message))
-        except :
-            print "send to server error"
+        except Exception as inst :
+            print type(inst)
+            print inst
+            # print "send to server error"
             self.init_username_error()
             
         infds_c,outfds_c,errfds_c = select.select([self.s,],[],[])
@@ -271,9 +273,10 @@ class client(object):
                     for ut_item in xyz[1] :
                         key = (ut_item[0], int(ut_item[1]))
                     
-                        self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : None}
+                        self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : time.time()}
                         if key == self.listening_addr :
                             self.music_table[key] = self.music_info
+                            self.session_table[key]['app_start_time'] = self.app_start_time
 
                     self.session_table_lock.release()                                           
                     self.music_table_lock.release()
@@ -360,6 +363,7 @@ class client(object):
                         self.thread_stream.start()
                 else :
                     print 'app_start_times don\'t match'
+                    # print message.receiver_app_start_time, self.app_start_time
                     self.send_C_Music(message.sender_listening_addr, 'CCHB')
 
     def stream_music(self, message) :
@@ -490,7 +494,8 @@ class client(object):
 
     def remove_music_table(self, key):
         self.music_table_lock.acquire()
-        del self.music_table[key]
+        if key in self.music_table.keys() :
+            del self.music_table[key]
         self.music_table_lock.release()
 
     def open_listener(self):

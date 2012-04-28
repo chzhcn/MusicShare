@@ -29,6 +29,7 @@ class Player():
         self.cache_dic={}
         self.cache=Caching()
         self.cache_filepath=''
+        self.song_playing=False
         pass
     def receiver_init(self,ip,port,song_seq_num):
         

@@ -1,7 +1,7 @@
 <!doctype html>
 <head>
 <link rel="stylesheet" type="text/css" href="../static/style.css" />
-meta http-equiv="refresh" content="5" >
+<meta http-equiv="refresh" content="{{'5;url='+url_for('login')}}" >
 <title>Hello from Music Share</title>
 </head>
 <form action="{{url_for('refresh')}}" method=post>
@@ -25,7 +25,7 @@ meta http-equiv="refresh" content="5" >
     {% for seq,song in song_info.items() %}
     <tr>
     <td>
-    {{song.title}}
+    <a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq)}}"> {{song.title}} </a>
     </td>
     <td>
     {{song.album}}
