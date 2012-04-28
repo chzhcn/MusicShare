@@ -4,7 +4,7 @@
 <meta http-equiv="refresh" content="{{'5;url='+url_for('login')}}" >
 <title>Hello from Music Share</title>
 </head>
-<form action="{{url_for('refresh')}}" method=post>
+<form action="{{url_for('refresh')}}" method=post enctype="multipart/form-data">
 {% if name %}
   <h1>Welcome {{ name }}!</h1>
 {% else %}
@@ -22,6 +22,7 @@
         <th>Duration</th>
         <th>Year</th>
 	<th> </th>
+		<th> </th>
 	</thead>
 {% for user,song_info in music_table.items() %}
     {% for seq,song in song_info.items() %}
@@ -43,7 +44,14 @@
     </td>
     <td>
     <a href="{{url_for('like',seqno=seq,ip=user[0],port=user[1])}}">
-    <img id="like" src="../static/like.jpeg" height="50" width="50" />
+    <img id="like" src="../static/like.jpeg" height="50" width="50" /></a>
+    </td>
+    <td>
+    <!-- {% if user == listening_addr %} -->
+    <a href="{{url_for('remove',seqno=seq)}}">
+      <img id="remove" src="../static/trash.png" height="50" width="50" />
+      <a/>
+      <!-- {% endif %} -->
     </td>
     </tr>
     {% endfor %}

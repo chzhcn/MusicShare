@@ -12,9 +12,7 @@ class Music_Info(object):
         self.song_dict = {}
         self.file_dict = {}
 
-    def read_repo(self, starting_counter):
-        #repo_path="D:\workspace\MusicShare\songs2"
-        repo_path = os.path.abspath("songs2/") # FIXME: path should be changed later
+    def read_repo(self, starting_counter, repo_path):
         song_files = os.listdir(repo_path)
         for song_file in song_files :
             starting_counter[0] += 1;

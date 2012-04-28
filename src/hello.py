@@ -2,17 +2,27 @@ from flask import Flask,url_for,render_template,request
 from werkzeug import secure_filename
 import cli
 import threading
+import os
 app = Flask(__name__)
 c = cli.client()
 
+def template() :
+    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr)
+
 @app.route('/')
 def index():
-    return render_template('mainpage.html')
+    return render_template('hello.html')
 
 @app.route('/like/<int:seqno>&<ip>&<int:port>')
 def like(seqno,ip,port):
     c.send_like((ip,port),seqno)
-    return render_template("welcome.html",name=c.username,music_table=c.music_table)
+    return template()
+
+@app.route('/remove/<int:seqno>')
+def remove(seqno):
+    c.remove_song(c.file_table[seqno])
+    return template()
+
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -24,7 +34,8 @@ def login():
         c.username = name
         c.init_username()
 
-    return render_template("welcome.html",name=c.username,music_table=c.music_table)
+    return template()
+
 
 @app.route('/login/<receiver_ip>&<int:receiver_port>&<int:song_seq_num>', methods=['POST', 'GET'])
 def stream(receiver_ip, receiver_port, song_seq_num) :
@@ -35,10 +46,10 @@ def stream(receiver_ip, receiver_port, song_seq_num) :
         print 'called stream'
         # c.in_play = True
 
-    return render_template("welcome.html",name=c.username,music_table=c.music_table)
+    return template()
 
 def refresh1():
-    return render_template("welcome.html",name=c.username,music_table=c.music_table)
+    return template()
 
 def refresh2():
     while True:
@@ -50,11 +61,13 @@ def refresh():
     music_table={}
     if request.method == 'POST':
         f = request.files['newsong']
-        print f.filename
-        f.save("D:\workspace\MusicShare\songs\\"+secure_filename(f.filename))
-        return render_template("welcome.html",name=c.username,music_table=c.music_table)
-    else:
-        return render_template("welcome.html",name=c.username,music_table=c.music_table)
+        print 'filename: ' + f.filename
+        if f.filename != None :
+            path = c.repo_path+os.sep+secure_filename(f.filename)
+            f.save(path)
+            c.add_song_server(path)
+
+    return template()
 
 @app.route('/user/<username>')
 def show_user_profile(username):
