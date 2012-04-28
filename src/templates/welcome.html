@@ -1,7 +1,7 @@
 <!doctype html>
 <head>
 <link rel="stylesheet" type="text/css" href="../static/style.css" />
-meta http-equiv="refresh" content="5" >
+<meta http-equiv="refresh" content="{{'5;url='+url_for('login')}}" >
 <title>Hello from Music Share</title>
 </head>
 <form action="{{url_for('refresh')}}" method=post>
@@ -12,6 +12,7 @@ meta http-equiv="refresh" content="5" >
 {% endif %}
 <div>
 <input type="file" name="newsong">Add New Song</input>
+<input id="refresh" type="Submit" value="Add a song"/>
 </div>
 <table id="songs">
 <thead>
@@ -20,6 +21,7 @@ meta http-equiv="refresh" content="5" >
 		<th>Artist</th>
         <th>Duration</th>
         <th>Year</th>
+	<th> </th>
 	</thead>
 {% for user,song_info in music_table.items() %}
     {% for seq,song in song_info.items() %}
@@ -39,9 +41,12 @@ meta http-equiv="refresh" content="5" >
     <td>
     {{song.year}}
     </td>
+    <td>
+    <a href="{{url_for('like',seqno=seq,ip=user[0],port=user[1])}}">
+    <img id="like" src="../static/like.jpeg" height="50" width="50" />
+    </td>
     </tr>
     {% endfor %}
 {% endfor %}
 </table>
-<div><input id="refresh" type="Submit" value="Refresh"/></div>
 </form>
