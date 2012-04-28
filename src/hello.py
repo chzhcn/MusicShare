@@ -42,7 +42,11 @@ def stream(receiver_ip, receiver_port, song_seq_num) :
     print type(receiver_ip), type(receiver_port), type(song_seq_num)
     print receiver_ip, receiver_port, song_seq_num
     if c.player.song_playing == False :
-        c.send_stream((receiver_ip, receiver_port), song_seq_num)
+        recv_addr = (receiver_ip, receiver_port)
+        if c.listening_addr != recv_addr :
+            c.send_stream(recv_addr, song_seq_num)
+        else :
+            c.player.play_locally(song_seq_num)
         print 'called stream'
         # c.in_play = True
 
