@@ -6,7 +6,12 @@ app = Flask(__name__)
 c = cli.client()
 @app.route('/')
 def index():
-    return render_template('hello.html')
+    return render_template('mainpage.html')
+
+@app.route('/like/<int:seqno>&<ip>&<int:port>')
+def like(seqno,ip,port):
+    c.send_like((ip,port),seqno)
+    return render_template("welcome.html",name=c.username,music_table=c.music_table)
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
