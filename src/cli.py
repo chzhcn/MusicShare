@@ -35,6 +35,8 @@ class client(object):
     def __init__(self):
         self.s = None;
         self.send_socket = None;
+
+        self.repo_path = "songs/"
         
         self.username = None;        
         self.app_start_time = time.time()
@@ -46,7 +48,7 @@ class client(object):
         self.session_table = {}
         self.file_table = {}
         self.music_info_object = Music_Info()
-        self.music_info, self.file_table = self.music_info_object.read_repo(self.music_counter)
+        self.music_info, self.file_table = self.music_info_object.read_repo(self.music_counter, self.repo_path)
         
         self.music_table_lock = threading.Lock()
         self.session_table_lock = threading.Lock()
@@ -515,7 +517,7 @@ class client(object):
         self.streaming_sock.listen(5)
 
     def add_song(self,filepath):
-        repo_path = os.path.abspath("songs2/") # FIXME: path should be changed later
+        repo_path = os.path.abspath(self.repo_path) # FIXME: path should be changed later
         #check if song with same name exists
         self.music_info_lock.acquire()
         if(self.music_info_object.check_song_exists(self.music_info,filepath)==False):
@@ -527,6 +529,12 @@ class client(object):
         else:
             self.music_info_lock.release()
             print 'duplicate song already exists in library'
+
+    def add_song_server(self, filepath):
+        self.music_info_lock.acquire()
+        self.music_counter[0] +=1;
+        self.music_info_object.read_song(self.music_info,self.file_table,self.music_counter[0], filepath)
+        self.music_info_lock.release()
 
     def remove_song(self,filepath) :
         #check if song exists
