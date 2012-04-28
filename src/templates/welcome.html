@@ -27,7 +27,7 @@
     {% for seq,song in song_info.items() %}
     <tr>
     <td>
-    {{song.title}}
+    <a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq)}}"> {{song.title}} </a>
     </td>
     <td>
     {{song.album}}
