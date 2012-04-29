@@ -35,7 +35,7 @@ BEAT_PERIOD=15;CHECK_TIMEOUT=30
 class client(object):
 
     def __init__(self):
-        
+    
         self.local_test=True
         self.public_map_port=50001  #remote map listen port
         
@@ -48,9 +48,10 @@ class client(object):
         self.listening_addr=(self.ip,self.port)
         
         if self.local_test:
+            self.public_ip=self.ip
+            self.public_map_port=self.port
             self.real_ip_address=self.listening_addr
             
-        
 
         self.s = None;
         self.send_socket = None;
@@ -640,11 +641,21 @@ class client(object):
                 if not self.player.check_cache_dic(self.stream_song_num):
                     self.send_stream((self.stream_ip,self.stream_port),self.stream_song_num)
             elif command[0]=='play':
+                song_playing_flag=False
                 song_num=int(command[1])
                 for key in self.file_table.keys():
                     if key==song_num:
                         songpath=self.file_table[key]
-                        self.player.play(songpath)                           
+                        self.player.play(songpath)
+                        song_playing_flag=True
+                  
+                if song_playing_flag==False:
+                    cachepath=self.player.traverse_cache_dic(song_num)
+                    if len(cachepath)!=0:
+                        self.player.play(cachepath)
+                    else:
+                        print "Sorry there is no that song in the repo"
+                                              
             else :
                 print "command not recognized"
 
