@@ -35,7 +35,12 @@ BEAT_PERIOD=15;CHECK_TIMEOUT=30
 class client(object):
 
     def __init__(self):
-    
+        #If self.local_test=True, you can test the program without port forwarding ohterwise when self.local_test=False, you have to open the portfasting ability on your virtual machine.
+        #self.public_map_port is the only port we only need to input.
+        
+        #Port Fordaring Part: when you set up the portforwarding, you have to set the identical port number on the host and virtual machine.And add another two ports for streaming,
+        #The streaming port is (self.public_map_port+10),(self.public_map_port+11), in the following case, it is 50011,50012. 
+        #In the end, you need to setup three port for forwarding, 50001,50011,50012
         self.local_test=True
         self.public_map_port=50001  #remote map listen port
         
