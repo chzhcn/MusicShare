@@ -92,7 +92,7 @@ class Player():
 #        print "self.pipeline.is_locked_state()",self.pipeline.is_locked_state()
 #        print "self.pipeline.is_locked_state()",self.sink.is_locked_state()
 #        print "self.pipeline.is_locked_state()",self.tcpsrc.is_locked_state()
-        print self.pipeline.freeze_notify()
+#        print self.pipeline.freeze_notify()
         if msgType == gst.MESSAGE_ERROR:
             self.pipeline.set_state(gst.STATE_NULL)
             self.filepipeline.set_state(gst.STATE_NULL)
