@@ -72,7 +72,7 @@ class EchoServer(asyncore.dispatcher):
         return
     
     def handle_close(self):
-        self.logger.debug('handle_close()')
+        #self.logger.debug('handle_close()')
         self.close()
         return
 
@@ -127,7 +127,7 @@ class EchoHandler(asyncore.dispatcher):
 
             
     def handle_expt(self):
-        print "Disconned from :",self.addr
+        #print "Disconned from :",self.addr
         self.close() # connection failed, shutdown
 
     def handle_read(self):
@@ -146,7 +146,7 @@ class EchoHandler(asyncore.dispatcher):
         except:
             print "connection lost "
 			
-        print "2nd received data" , data,'from address',self.addr
+        #print "2nd received data" , data,'from address',self.addr
         if data:
             try:
                                                         newdata=ast.literal_eval(data)
@@ -161,11 +161,15 @@ class EchoHandler(asyncore.dispatcher):
                                                         
                                                         client_info=[ip,port,username,recv_time,v]
                                                         
-                                                        print "client_info", client_info
+                                                        #print "client_info", client_info
                                                         
                                                         self.lock.acquire()     
                                                         UTM.append(client_info)
                                                         self.lock.release()
+                                                        
+                                                        print ".....................%s is added into system..............\n" % newdata[3] 
+                                                        
+                                                        print "....................the UT now is......................\n",UTM
                                                         
                                                         self.v.tick()
                                                         
@@ -175,7 +179,7 @@ class EchoHandler(asyncore.dispatcher):
                                                         for y in UTM:
                                                             self.remoteUT.append((y[0],y[1],y[2]))
                   
-                                                        print "%s is added into our system" % newdata[3] 
+                                                        
                                                         tosend=str(('UT',self.remoteUT))
                                                         self.data_to_write.append(tosend)
      
@@ -186,9 +190,10 @@ class EchoHandler(asyncore.dispatcher):
                                                             heartbeats_test[newdata[1]]=time.time()
         
                                                         
-                                                        print "HB Connected from" , self.addr
-                                                        print "Recevied PyHB",time.ctime() 
-                                                        print "HB Disconnected from", self.addr,'\n'
+                                                        print "Recevied PyHB from ",self.addr, time.ctime() 
+#                                                        print "HB Connected from" , self.addr
+#                                                        print "Recevied PyHB",time.ctime() 
+#                                                        print "HB Disconnected from", self.addr,'\n'
                                                         self.close()
             #......................................Server Part.................................................                                             
             elif newdata[0] =='SPyHB':
@@ -197,8 +202,9 @@ class EchoHandler(asyncore.dispatcher):
                                                         #client_info=[ip,port,username,recv_time,self.vector]
     
                                                         #msg=str(('SPyHB','Server',UTM))
-                                                        print "SHB Connected from" , self.addr
-                                                        print "Recevied SPyHB",time.ctime() 
+                                                        print "Recevied SPyHB from " ,self.addr,time.ctime() 
+#                                                        print "SHB Connected from" , self.addr
+#                                                        print "Recevied SPyHB",time.ctime() 
                                                         #print "SHB Disconnected from", self.addr,'\n'
                                                         
     #                                                    if newdata[1]!=[] and UTM!=[]:
@@ -421,9 +427,9 @@ class EchoClient(asyncore.dispatcher):
                                                     pass
         if newdata[0] =='SPyHB':
                                                     heartbeats_test[newdata[1]]=time.time()
-                                                    print "SHB Connected from" , self.addr
-                                                    print "Recevied SPyHB",time.ctime() 
-                                                    print "SHB Disconnected from", self.addr,'\n'
+#                                                    print "SHB Connected " , self.addr
+                                                    print "Recevied SPyHB from",self.addr,time.ctime() 
+#                                                    print "SHB Disconnected from", self.addr,'\n'
                                                     UTM=newdata[1] 
                                                     print "received peer update now",UTM 
                                                     #self.close()
