@@ -1,7 +1,7 @@
 <!doctype html>
 <head>
 <link rel="stylesheet" type="text/css" href="../static/style.css" />
-<meta http-equiv="refresh" content="{{'15;url='+url_for('login')}}" >
+<meta http-equiv="refresh" content="{{'25;url='+url_for('login')}}" >
 <title>Hello from Music Share</title>
 </head>
 <form action="{{url_for('refresh')}}" method=post enctype="multipart/form-data">
@@ -13,22 +13,28 @@
 <div>
 <input type="file" name="newsong">Add New Song</input>
 <input id="refresh" type="Submit" value="Add a song"/>
+<br>
 </div>
 <table id="songs">
 <thead>
 		<th>Song Title</th>
+		<th> </th>
 		<th>Album</th>
 		<th>Artist</th>
         <th>Duration</th>
         <th>Year</th>
-	<th> </th>
-		<th> </th>
+	<th>Like</th>
+		<th>Remove</th>
 	</thead>
 {% for user,song_info in music_table.items() %}
     {% for seq,song in song_info.items() %}
     <tr>
     <td>
-    <a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq)}}"> {{song.title}} </a>
+    {{song.title}}
+    </td>
+    <td>
+    <a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq)}}"/><img src="../static/pause2.png" height="30" width="30"/></a>
+    <a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq)}}"/><img src="../static/play2.png" height="30" width="30"/></a>
     </td>
     <td>
     {{song.album}}
@@ -44,12 +50,12 @@
     </td>
     <td>
     <a href="{{url_for('like',seqno=seq,ip=user[0],port=user[1])}}">
-    <img id="like" src="../static/like.jpeg" height="50" width="50" /></a>
+    <img id="like" src="../static/like.jpeg" height="30" width="30" /></a>
     </td>
     <td>
     <!-- {% if user == listening_addr %} -->
     <a href="{{url_for('remove',seqno=seq)}}">
-      <img id="remove" src="../static/trash.png" height="50" width="50" />
+      <img id="remove" src="../static/trash.png" height="30" width="30" />
       <a/>
       <!-- {% endif %} -->
     </td>
