@@ -15,6 +15,7 @@
 <input id="refresh" type="Submit" value="Add a song"/>
 <br>
 </div>
+<a href="{{url_for('pause') }}"/><img src="../static/pause2.png" height="30" width="30"/></a>
 <table id="songs">
 <thead>
 		<th>Song Title</th>
@@ -33,7 +34,7 @@
     {{song.title}}
     </td>
     <td>
-    <a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq)}}"/><img src="../static/pause2.png" height="30" width="30"/></a>
+    <!-- <a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq)}}"/><img src="../static/pause2.png" height="30" width="30"/></a> -->
     <a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq)}}"/><img src="../static/play2.png" height="30" width="30"/></a>
     </td>
     <td>

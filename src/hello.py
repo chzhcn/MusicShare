@@ -41,12 +41,17 @@ def login():
 def stream(receiver_ip, receiver_port, song_seq_num) :
     print type(receiver_ip), type(receiver_port), type(song_seq_num)
     print receiver_ip, receiver_port, song_seq_num
-    if c.player.is_playing == False :
-        recv_addr = (receiver_ip, receiver_port)
-        c.try_stream(recv_addr, song_seq_num)
-        print 'called stream'
+    # if c.player.is_playing == False :
+    recv_addr = (receiver_ip, receiver_port)
+    c.try_stream(recv_addr, song_seq_num)
+    print 'called stream'
         # c.in_play = True
 
+    return template()
+
+@app.route('/pause', methods=['POST', 'GET'])
+def pause() :
+    c.player.pause()
     return template()
 
 def refresh1():
@@ -83,4 +88,4 @@ with app.test_request_context('/hello', method='POST'):
 
 if __name__ == '__main__':
     app.debug = True
-    app.run('127.0.0.1', 1234)
+    app.run('127.0.0.1', 1235)

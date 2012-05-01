@@ -36,7 +36,7 @@ class client(object):
         self.s = None;
         self.send_socket = None;
 
-        self.repo_path = "songs2/"
+        self.repo_path = "songs/"
         
         self.username = None;        
         self.app_start_time = time.time()
