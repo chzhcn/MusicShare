@@ -36,7 +36,7 @@ class client(object):
         self.s = None;
         self.send_socket = None;
 
-        self.repo_path = "songs/"
+        self.repo_path = "songs2/"
         
         self.username = None;        
         self.app_start_time = time.time()
@@ -423,6 +423,12 @@ class client(object):
     def send_like(self, receiver_key, song_seq_num):
         self.send_request('LIKE', receiver_key, song_seq_num)
 
+    def try_stream(self, receiver_key, song_seq_num) :
+        if self.listening_addr != receiver_key :
+            self.send_stream(receiver_key, song_seq_num)
+        elif song_seq_num in self.file_table.keys():
+            self.player.play(self.file_table[song_seq_num])
+
     def send_stream(self, receiver_key, song_seq_num):
         self.send_request('STREAM', receiver_key, song_seq_num)
         
@@ -566,7 +572,7 @@ class client(object):
                 self.send_like((command[1], int(command[2])), int(command[3]))
 
             elif command[0] == 'stream' :
-                self.send_stream((command[1], int(command[2])), int(command[3]))
+                self.try_stream((command[1], int(command[2])), int(command[3]))
 
             elif command[0] == 'add':
                 self.add_song(command[1])
