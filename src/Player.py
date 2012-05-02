@@ -31,6 +31,7 @@ class Player():
         self.cache_filepath=''
         self.is_playing=False
         self.is_sending=False
+        self.port_list=[]
         pass
     def receiver_init(self,ip,port,song_seq_num):
         
@@ -78,6 +79,7 @@ class Player():
         self.bus.add_signal_watch()
         self.bus.connect("message", self.message_handler)
         
+        print "I am prepare to play"
         thread.start_new_thread(self.song_loop, ())
 #        self.thread_song_play=threading.Thread(target=self.song_loop)
 #        self.thread_song_play.start()
@@ -114,15 +116,16 @@ class Player():
 
     def sender_init(self,ip,port,filepath):
         
-        self.port_list=[]
-        
-
-        if port in self.port_list:
-            
-            self.port_list.remove(port)
-        else:
-            self.port_list.append(ip)
-            
+        self.check_sending()
+#        
+#        print "I want to send something"
+#        
+#        print self.port_list
+#        if port in self.port_list:
+#            self.port_list.remove(port)
+#
+#        else:
+#            self.port_list.append(port)
 
         
         self.sender_pipeline = gst.Pipeline("client")
@@ -149,10 +152,13 @@ class Player():
         bus = self.sender_pipeline.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.sender_message_handler)
-
-        
+         
+        print "I am beginning to send now"
         time.sleep(1)
-        self.sender_pipeline.set_state(gst.STATE_PLAYING)   
+        
+        self.sender_pipeline.set_state(gst.STATE_PLAYING) 
+        self.is_sending=True
+        print self.sender_pipeline.get_state();
         self.pipeline1.set_state(gst.STATE_PLAYING)
         thread.start_new_thread(self.song_loop, ())
         
@@ -165,6 +171,17 @@ class Player():
         elif msgType == gst.MESSAGE_EOS:
             self.sender_pipeline.set_state(gst.STATE_NULL)
             self.evt_loop.quit()
+            
+    def stop_send(self):
+        self.sender_pipeline.set_state(gst.STATE_NULL)
+        self.evt_loop.quit()
+        
+    def check_sending(self):
+        if self.is_sending:
+            self.stop_send()
+            self.is_sending=False
+        else:
+            print "You pass the check"
         
         
 
