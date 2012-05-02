@@ -44,6 +44,7 @@ class client(object):
         self.open_portforward(False)
        
         self.s = None;
+        self.is_connected=False
         self.send_socket = None;
 
         self.repo_path = "songs/"
@@ -454,9 +455,15 @@ class client(object):
  
     def send_obj(self, addr, obj):  
         try :
-            self.send_socket = socket.create_connection(addr, 10)    
-            data = pickle.dumps(obj)
-            self.send_socket.send(data); 
+            try:
+                self.send_socket = socket.create_connection(addr, 10)
+                self.is_connected=True
+            except:
+                self.is_connected=False
+                print "+++++++++++++++++++++++Connection Problem++++++++++++++++++++++"   
+            if self.is_connected: 
+                data = pickle.dumps(obj)
+                self.send_socket.sendall(data);  
         except Exception as inst:
             print type(inst)
             print inst
