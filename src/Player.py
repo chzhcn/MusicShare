@@ -25,7 +25,8 @@ from Caching import Caching
 
 
 class Player():
-    def __init__(self):
+    def __init__(self,client):
+        self.client=client
         self.cache_dic={}
         self.cache=Caching()
         self.cache_filepath=''

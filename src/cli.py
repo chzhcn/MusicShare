@@ -111,7 +111,7 @@ class client(object):
         self.thread_client_liveness = threading.Thread(target=self.client_liveness_check)
         self.thread_client_liveness.start()
         
-        self.player=Player()
+        self.player=Player(self,)
         
     def getNetworkIp(self):   
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
