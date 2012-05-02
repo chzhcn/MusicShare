@@ -100,18 +100,20 @@ class client(object):
     def open_portforward(self,value):
         if value:
             
-            self.local_test=True
-            self.public_map_port=50001  #remote map listen port
+            self.unified_port=True
             
+            #................For telling bootstrap server...................
             self.public_ip=str(self.get_real_ip())
+            self.public_map_port=50001  #remote map listen port        
             self.real_ip_address=(self.public_ip,self.public_map_port)
         
-        
+            #................For local listening...................
             self.ip=str(self.getNetworkIp()) 
             self.port=self.public_map_port    #local listen port
             self.listening_addr=(self.ip,self.port)
-        
-            if self.local_test:
+            
+            #................For test in local Lan, if self.unified_port=True,it can be tested in Lan,otherwise it must be tested in WAN
+            if self.unified_port:
                 self.public_ip=self.ip
                 self.public_map_port=self.port
                 self.real_ip_address=self.listening_addr
