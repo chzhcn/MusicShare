@@ -22,8 +22,11 @@ class Music_Info(object):
         return self.song_dict, self.file_dict
 
     def read_song(self, song_dict, file_dict, index, filepath) :
-            song_dict[index] = Song_Info(filepath);
-            file_dict[index] = filepath;
+        song_dict[index] = Song_Info(filepath);
+        file_dict[index] = filepath;
+
+    def read_song(self, file_dict, index, filepath) :
+        file_dict[index] = filepath;
 
     def check_song_exists(self,song_dict,filepath):
         new_song_title = Song_Info(filepath).title

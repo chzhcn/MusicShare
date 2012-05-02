@@ -23,7 +23,6 @@ def remove(seqno):
     c.remove_song(c.file_table[seqno])
     return template()
 
-
 @app.route('/login', methods=['POST', 'GET'])
 def login():
     name = None
@@ -36,13 +35,10 @@ def login():
 
     return template()
 
-@app.route('/resume', methods=['POST', 'GET']) 
-def resume() :
-    if c.player.is_paused == True :
-       c.player.resume()
-
-    return template()
-
+def dump_flags(func) :
+    print func
+    print 'is_playing: ', c.player.is_playing
+    print 'is_paused: ', c.player.is_paused
 
 @app.route('/login/<receiver_ip>&<int:receiver_port>&<int:song_seq_num>', methods=['POST', 'GET'])
 def stream(receiver_ip, receiver_port, song_seq_num) :
@@ -55,14 +51,27 @@ def stream(receiver_ip, receiver_port, song_seq_num) :
 
     return template()
 
+@app.route('/resume', methods=['POST', 'GET']) 
+def resume() :
+    # dump_flags('resume')
+    if c.player.is_paused == True :
+       c.player.resume()
+
+    # dump_flags('resume')
+    return template()
+
 @app.route('/pause', methods=['POST', 'GET'])
 def pause() :
+    # dump_flags('pause')
     c.player.pause()
+    # dump_flags('pause');
     return template()
 
 @app.route('/stop', methods=['POST', 'GET'])
 def stop() :
+    # dump_flags('stop')
     c.player.stop()
+    # dump_flags('stop')
     return template()
 
 def refresh1():
