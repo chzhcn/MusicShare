@@ -244,7 +244,7 @@ class Player():
             else:
                 pass
             
-            if self.file_stream:
+            if self.file_stream and os.path.isfile(filepath):
                  #............For temp file...............
                 temp_filepath=self.cache.temp_file(filepath)
                 self.file_stream=False

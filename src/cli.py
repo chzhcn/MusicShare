@@ -40,24 +40,9 @@ BEAT_PERIOD=15;CHECK_TIMEOUT=30
 class client(object):
 
     def __init__(self):
-    
-        self.local_test=True
-        self.public_map_port=50001  #remote map listen port
         
-        self.public_ip=str(self.get_real_ip())
-        self.real_ip_address=(self.public_ip,self.public_map_port)
-        
-        
-        self.ip=str(self.getNetworkIp()) 
-        self.port=self.public_map_port    #local listen port
-        self.listening_addr=(self.ip,self.port)
-        
-        if self.local_test:
-            self.public_ip=self.ip
-            self.public_map_port=self.port
-            self.real_ip_address=self.listening_addr
-            
-
+        self.open_portforward(False)
+       
         self.s = None;
         self.send_socket = None;
 
@@ -90,7 +75,7 @@ class client(object):
         self.received_hb={}
         
         self.connect_server()
-        self.open_listener()
+
 
         
         self.thread_client_receive = threading.Thread(target=self.receive_client)
@@ -112,6 +97,35 @@ class client(object):
         self.thread_client_liveness.start()
         
         self.player=Player(self,)
+    def open_portforward(self,value):
+        if value:
+            
+            self.local_test=True
+            self.public_map_port=50001  #remote map listen port
+            
+            self.public_ip=str(self.get_real_ip())
+            self.real_ip_address=(self.public_ip,self.public_map_port)
+        
+        
+            self.ip=str(self.getNetworkIp()) 
+            self.port=self.public_map_port    #local listen port
+            self.listening_addr=(self.ip,self.port)
+        
+            if self.local_test:
+                self.public_ip=self.ip
+                self.public_map_port=self.port
+                self.real_ip_address=self.listening_addr
+            self.open_listener()
+        else:
+            
+            self.open_local_listener()
+            
+            self.ip=self.listening_addr[0]
+            self.port=self.listening_addr[1]     #local listen port
+            
+            self.public_ip=self.ip
+            self.public_map_port=self.port
+            self.real_ip_address=self.listening_addr
         
     def getNetworkIp(self):   
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
@@ -571,7 +585,16 @@ class client(object):
             #self.listening_sock.bind(self.listening_addr)
             
         self.listening_sock.listen(5)
-
+        
+    def open_local_listener(self):
+        self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
+        self.listening_addr = (str(self.getNetworkIp()), 0)       
+        self.listening_sock.bind(self.listening_addr)
+        self.listening_addr = self.listening_sock.getsockname()
+        self.listening_sock.listen(5)
+        return self.listening_addr
+    
 
     def add_song(self,filepath):
         repo_path = os.path.abspath(self.repo_path) # FIXME: path should be changed later
