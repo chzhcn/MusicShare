@@ -196,9 +196,9 @@ class Player():
                 #print "dencryption is finished"
     def sender_init(self,ip,port,filepath):
         if port not in self.sender_instance_list.keys():
-            self.self.sender_instance_list[port]=Sender(ip,port,filepath)
+            self.sender_instance_list[port]=Sender(ip,port,filepath)
         else:
-            self.self.sender_instance_list[port].sender_init(ip,port,filepath)
+            self.sender_instance_list[port].sender_init(ip,port,filepath)
 
            
             
@@ -262,6 +262,7 @@ class Sender():
         print "message is send to sender"
         self.port_list=[]
         self.sender_init(ip, port, filepath)
+        self.client1='haha'
         pass
     def sender_init(self,ip,port,filepath):
                 
