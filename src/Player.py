@@ -30,6 +30,7 @@ class Player():
         self.cache=Caching()
         self.cache_filepath=''
         self.is_playing=False
+        self.is_paused=False
         pass
     def receiver_init(self,ip,port,song_seq_num):
         
@@ -249,14 +250,20 @@ class Player():
         self.thread_song_play.start()   
                     
     def resume(self):
-        self.pipeline.set_state(gst.STATE_PLAYING) 
-           
+        if self.is_paused == True :
+            self.pipeline.set_state(gst.STATE_PLAYING) 
+            self.is_paused = False
+
     def stop(self):
+        self.is_playing == False
+        self.is_paused = False
         self.pipeline.set_state(gst.STATE_NULL)
         self.evt_loop.quit()
         
     def pause(self):
-        self.pipeline.set_state(gst.STATE_PAUSED)
+        if self.is_playing == True :
+            self.pipeline.set_state(gst.STATE_PAUSED)
+            self.is_paused = True
         
     def replay(self):
         pass
@@ -293,11 +300,3 @@ class Player():
         print 'on_tag:'
         for key in taglist.keys():
             print '\t%s = %s' % (key, taglist[key])     
-            
-
-
-
-
-
-
-    

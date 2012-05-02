@@ -7,7 +7,7 @@ app = Flask(__name__)
 c = cli.client()
 
 def template() :
-    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr)
+    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr, is_paused = c.player.is_paused)
 
 @app.route('/')
 def index():
@@ -36,6 +36,13 @@ def login():
 
     return template()
 
+@app.route('/resume', methods=['POST', 'GET']) 
+def resume() :
+    if c.player.is_paused == True :
+       c.player.resume()
+
+    return template()
+
 
 @app.route('/login/<receiver_ip>&<int:receiver_port>&<int:song_seq_num>', methods=['POST', 'GET'])
 def stream(receiver_ip, receiver_port, song_seq_num) :
@@ -43,15 +50,19 @@ def stream(receiver_ip, receiver_port, song_seq_num) :
     print receiver_ip, receiver_port, song_seq_num
     # if c.player.is_playing == False :
     recv_addr = (receiver_ip, receiver_port)
-    c.try_stream(recv_addr, song_seq_num)
+    c.try_play(recv_addr, song_seq_num)
     print 'called stream'
-        # c.in_play = True
 
     return template()
 
 @app.route('/pause', methods=['POST', 'GET'])
 def pause() :
     c.player.pause()
+    return template()
+
+@app.route('/stop', methods=['POST', 'GET'])
+def stop() :
+    c.player.stop()
     return template()
 
 def refresh1():
@@ -88,4 +99,4 @@ with app.test_request_context('/hello', method='POST'):
 
 if __name__ == '__main__':
     app.debug = True
-    app.run('127.0.0.1', 1235)
+    app.run('127.0.0.1', 1234)
