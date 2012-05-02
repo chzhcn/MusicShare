@@ -622,7 +622,13 @@ class client(object):
             elif command[0] == 'like' :
                 self.send_like((command[1], int(command[2])), int(command[3]))
 
-            elif command[0] == 'stream' :
+            elif command[0] == 'stream' :       
+                if self.player.is_playing:
+                    print "It is playing now"
+                    self.player.pause() 
+                    self.player.stop() 
+                else:
+                    print "I am lucky"
                 self.send_stream((command[1], int(command[2])), int(command[3]))
 
             elif command[0] == 'add':

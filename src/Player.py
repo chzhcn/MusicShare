@@ -30,6 +30,7 @@ class Player():
         self.cache=Caching()
         self.cache_filepath=''
         self.is_playing=False
+        self.is_sending=False
         pass
     def receiver_init(self,ip,port,song_seq_num):
         
@@ -112,6 +113,16 @@ class Player():
                 
 
     def sender_init(self,ip,port,filepath):
+        
+        self.port_list=[]
+        
+
+        if port in self.port_list:
+            
+            self.port_list.remove(port)
+        else:
+            self.port_list.append(ip)
+            
 
         
         self.sender_pipeline = gst.Pipeline("client")
