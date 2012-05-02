@@ -13,6 +13,7 @@ import threading;
 import select;
 import shutil
 import os
+import random
 
 import urllib 
 import re
@@ -39,7 +40,7 @@ BEAT_PERIOD=15;CHECK_TIMEOUT=30
 
 class client(object):
 
-    def __init__(self):
+    def __init__(self, path):
     
         self.local_test=True
         self.public_map_port=50001  #remote map listen port
@@ -56,12 +57,11 @@ class client(object):
             self.public_ip=self.ip
             self.public_map_port=self.port
             self.real_ip_address=self.listening_addr
-            
 
         self.s = None;
         self.send_socket = None;
 
-        self.repo_path = "songs/"
+        self.repo_path = path
         
         self.username = None;        
         self.app_start_time = time.time()
@@ -304,7 +304,7 @@ class client(object):
                 if xyz[0] == 'UT':
                     print '1'
                     self.session_table_lock.acquire()                                      
-                    self.music_table_lock.acquire()    
+                    self.music_table_lock.acquire()
                     # contact other clients except myself
                     for ut_item in xyz[1] :
                         key = (ut_item[0], int(ut_item[1]))
@@ -314,10 +314,10 @@ class client(object):
                             self.music_table[key] = self.music_info
                             self.session_table[key]['app_start_time'] = self.app_start_time
 
-                    self.session_table_lock.release()                                           
                     self.music_table_lock.release()
+                    self.session_table_lock.release()
 
-                    print "first time multicast discovery message to clients - this line shouldn't be seen twice"
+                    print "first time multicasting discovery message to clients - this line shouldn't be seen twice"
                 
                     self.multicast_CCD()
                 else :
@@ -346,10 +346,12 @@ class client(object):
             peer_socket.close()
             try:
                 message = pickle.loads(data);
-            except:
-                message.m_type=None
-                message.sender_listening_addr=None      
-                pass
+            except Exception as inst:
+		    print type(inst)
+		    print inst
+		    message.m_type=None
+		    message.sender_listening_addr=None
+		    pass
             
             print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
 
@@ -388,7 +390,7 @@ class client(object):
                     print 'message received is discovery; sending back a client heartbeat message as reply'
                     self.send_C_Music(message.sender_listening_addr, 'CCHB') 
                 
-            elif message.m_type == 'LIKE' or message.m_type == 'STREAM'  :
+            elif message.m_type == 'LIKE' or message.m_type == 'STREAM' or message.m_type == 'REP'  :
                 if message.receiver_app_start_time == self.app_start_time :
                     print 'app_start_times match'
                     if message.m_type == 'LIKE' and message.song_seq_no in self.music_info.keys() :
@@ -399,6 +401,9 @@ class client(object):
                         # print 'stream'
                         self.thread_stream = threading.Thread(target=self.stream_music, args=(message,))
                         self.thread_stream.start()
+		    elif message.m_type == 'REP' :
+			self.patch_music_table_rep(self.listenging_addr, message.song_seq_no, message.sender_listening_addr, message.cache_seq)
+			self.multicast_C_Music(self, 'CCHB')
                 else :
                     print 'app_start_times don\'t match'
                     # print message.receiver_app_start_time, self.app_start_time
@@ -424,16 +429,16 @@ class client(object):
             
     def dump_table(self):
         print 'dump tables: '
-        print '..............................Remote songs...........................'
+        print '..............................Music Table...........................'
         for key in self.music_table.keys():
             print "..............." ,key
             for i in self.music_table[key].keys():
                 print i,":",self.music_table[key][i],'\n'            
         # print self.session_table
-        print '..............................Local Songs...........................'
+        print '..............................File Table...........................'
         for key in self.file_table:
             print key,":",self.file_table[key],'\n'
-        print "..............................Music INfo............................"
+        print "..............................Self Music INfo............................"
         print self.music_info
  
     def send_obj(self, addr, obj):  
@@ -447,35 +452,26 @@ class client(object):
             print "send_obj() exception. addr: %s obj: %s" % (addr, str(obj))
             raise
 
-    def send_request(self, request_type, receiver_key, song_seq_num):
+    def send_request(self, request_type, receiver_key, song_seq_num, cache_seq=-1):
         self.logical_clk_lock.acquire()
         self.logical_clk_time += 1
         try :
-            self.music_info_lock.acquire()
             self.streaming_addr=receiver_key
-            self.send_obj(receiver_key, Client_Request_Message(request_type, self.real_ip_address, self.username, self.app_start_time, self.logical_clk_time, self.session_table[receiver_key]['app_start_time'], song_seq_num, self.streaming_addr[1]))
+            self.send_obj(receiver_key, Client_Request_Message(request_type, self.real_ip_address, self.username, self.app_start_time, self.logical_clk_time, self.session_table[receiver_key]['app_start_time'], song_seq_num, self.streaming_addr[1], cache_seq))
         except Exception as inst:
             print type(inst)
             print inst
             print "send_request() exception"
         finally:
             self.logical_clk_lock.release()
-            self.music_info_lock.release()
+
+    def send_rep(self, receiver_key, receiver_song_seq_num, cache_seq) :
+	    self.send_request('REP', receiver_key, receiver_song_seq_num, cache_seq)
 
     def send_like(self, receiver_key, song_seq_num):
         self.send_request('LIKE', receiver_key, song_seq_num)
 
-    def try_play(self, receiver_key, song_seq_num) :
-	    if self.player.is_playing :
-		    print "It is playing now"
-		    self.player.pause()
-		    self.player.stop()
-	    if self.listening_addr != receiver_key :
-		    self.send_stream(receiver_key, song_seq_num)
-	    elif song_seq_num in self.file_table.keys():
-		    self.player.play(self.file_table[song_seq_num])
-
-    def send_stream(self, receiver_key, song_seq_num):
+    def send_stream(self, receiver_key, song_seq_num, owner_key, owner_song_seq_num):
         self.send_request('STREAM', receiver_key, song_seq_num)
         
         self.stream_ip=receiver_key[0];
@@ -489,9 +485,8 @@ class client(object):
         print "request song num :",self.stream_song_num 
         print "receive stream ip :",self.ip
         print "receive stream port :",self.port
-         
 
-        self.player.receiver_init(self.ip,self.port,self.stream_song_num)
+        self.player.receiver_init(self.ip,self.port, self.stream_song_num, owner_key, owner_song_seq_num)
             
     def send_C_Music(self, address, m_type):
         self.logical_clk_lock.acquire()
@@ -504,17 +499,17 @@ class client(object):
             print inst
             print "send_C_Music() exception addr %s obj: %s" % (address, self.music_info)
         finally:
-            self.logical_clk_lock.release()
             self.music_info_lock.release()
+            self.logical_clk_lock.release()
     
     def multicast_C_Music(self, m_type):
         print "multicasting music info to clients"
         self.session_table_lock.acquire()
         for k in self.session_table.keys() :
-            # print (k, v)
-            if k != self.real_ip_address and k!=0 and k!=None :
-                self.send_C_Music(k, m_type)
-        self.session_table_lock.release() 
+            # if k != self.real_ip_address and k!=0 and k!=None :
+		    # print k
+		self.send_C_Music(k, m_type)
+	self.session_table_lock.release()
                 
     def multicast_CCD(self):
         self.multicast_C_Music('CCD')
@@ -551,6 +546,7 @@ class client(object):
         if key in self.music_table.keys():
             del self.music_table[key]
         self.music_table_lock.release()
+
     def close_listen_port(self,port):
         while True:
             try:
@@ -566,7 +562,48 @@ class client(object):
                     break
             except:
                 pass
-            
+
+    def look_up_cache(receiver_key, song_seq_num):
+	    local_seq = -1
+	    no_rep = True
+	    rep = None
+
+	    if receiver_key not in self.music_table.keys() or song_seq_num not in self.music_table[receiver_key].keys():
+		    return (local_seq, no_req, rep)
+
+	    if self.listening_addr in self.music_table[receiver_key][song_seq_num].rep_dict.keys() :
+		    local_seq = self.self.music_table[receiver_key][song_seq_num].rep_dict[self.listening_addr]
+		    no_rep = False
+	    else :
+		    rep_len = len(self.music_table[receiver_key][song_seq_num].rep_dict.items()) == 0
+		    if rep_len == 0 :
+			    no_rep = True
+		    else :
+			    rep_itmes = self.music_table[receiver_key][song_seq_num].rep_dict.items()
+			    no_rep = False
+			    rep = rep_items[random.randint(0, rep_len-1)]
+
+	    return (local_seq, no_req, rep)
+
+    def try_play(self, owner_key, owner_song_seq_num) :
+	    if self.player.is_playing :
+		    print "It is playing now"
+		    self.player.pause()
+		    self.player.stop()
+	    if self.listening_addr == owner_key and owner_song_seq_num in self.file_table.keys():
+		    print 'playing from local repo'
+		    self.player.play(self.file_table[owner_song_seq_num])
+	    else :
+		    local_seq, no_req, rep = self.look_upcache(owner_key, owner_song_seq_num)
+		    if no_req == True :
+			    print 'no cache; send request to owner: %s %s' % (owner_key, owner_song_seq_num)
+			    self.send_stream(owner_key, owner_song_seq_num, owner_key, owner_song_seq_num)
+		    elif rep != None :
+			    print 'multiple cache; send request to one of them: %s %s, owner: %s %s' & (rep[0], rep[1], owner_key, owner_song_seq_num)
+			    self.send_stream(rep[0], rep[1], owner_key, owner_song_seq_num)
+		    else :
+			    print 'play from local cache'
+			    self.player.play(self.file_table[loca_seq])
 
     def open_listener(self):
         self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)        
@@ -600,8 +637,10 @@ class client(object):
     def add_cache(self, cache_path) :
 	self.music_info_lock.acquire()
 	self.music_counter[0] +=1;
+	seq = self.music_counter[0]
 	self.music_info_object.add_cache(self.file_table,self.music_counter[0], cache_path)
 	self.music_info_lock.release()
+	return seq
 
     def add_song_server(self, filepath):
         self.music_info_lock.acquire()
@@ -615,6 +654,12 @@ class client(object):
         #Remove song from song_dict/music_info
         self.music_info_object.remove_song(self.music_info,self.file_table,filepath)
         self.music_info_lock.release()
+
+    def patch_music_table_rep(self, holder_key, holder_song_seq_num, rep_listening_addr, cache_seq_num) :
+	self.music_table_lock.acquire()
+	if holder_key in self.music_table.keys() :
+		self.music_table[holder_key][holder_song_seq_num].add_rep(repr_listening_addr, cache_seq_num)
+	self.music_table_lock.release()
 
     def run(self):
         

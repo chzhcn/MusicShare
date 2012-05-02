@@ -35,7 +35,7 @@ class Player():
         self.is_sending=False
         self.port_list=[]
         pass
-    def receiver_init(self,ip,port,song_seq_num):
+    def receiver_init(self,ip,port,song_seq_num, owner_key, owner_song_seq_num):
         
         self.cache_filepath=self.get_plain_cachefilepath(song_seq_num)
         #print "cache location is " ,self.cache_filepath
@@ -86,7 +86,7 @@ class Player():
 #        self.thread_song_play=threading.Thread(target=self.song_loop)
 #        self.thread_song_play.start()
         
-        self.thread_caching_song=threading.Thread(target=self.cache_song,args=(self.cache_filepath,song_seq_num,))
+        self.thread_caching_song=threading.Thread(target=self.cache_song,args=(self.cache_filepath,song_seq_num, owner_key, owner_song_seq_num))
         self.thread_caching_song.start()
         
     def message_handler(self, bus, message):
@@ -185,8 +185,6 @@ class Player():
         else:
             print "You pass the check"
         
-        
-
     def check_cache_dic(self,song_num):
         if song_num in self.cache_dic.keys():
             self.play_locally(song_num)
@@ -228,7 +226,7 @@ class Player():
             pad.link(self.convert.get_pad("sink"))   
         
         
-    def cache_song(self,filepath,song_seq_num):
+    def cache_song(self,filepath,song_seq_num, owner_key, owner_song_seq_num):
         compare_size=0
         size=0
         self.file_stream=False
@@ -249,7 +247,10 @@ class Player():
                  #............For temp file...............
                 temp_filepath=self.cache.temp_file(filepath)
                 self.file_stream=False
-                self.cache_dic[song_seq_num]=temp_filepath
+                cache_seq = self.client.add_cache(filepath)
+                self.client.file_table[cache_seq] = temp_filepath
+                self.client.patch_music_table_rep(owner_key, owner_song_seq_num, client.listening_addr, cache_seq)
+                self.client.send_rep(owner_key, owner_song_seq_num, cache_seq)
                 print "Caching is finished :",self.cache_dic
                 os.remove(filepath)
                 break

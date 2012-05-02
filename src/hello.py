@@ -3,8 +3,10 @@ from werkzeug import secure_filename
 import cli
 import threading
 import os
+import sys
+
 app = Flask(__name__)
-c = cli.client()
+c = None
 
 def template() :
     return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr, is_paused = c.player.is_paused)
@@ -107,5 +109,8 @@ with app.test_request_context('/hello', method='POST'):
     assert request.method == 'POST'
 
 if __name__ == '__main__':
+    global c;
+    c = cli.client(sys.argv[2])
+    port = int(sys.argv[1])
     app.debug = True
-    app.run('127.0.0.1', 1234)
+    app.run('127.0.0.1', port)

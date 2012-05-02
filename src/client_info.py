@@ -25,7 +25,7 @@ class Music_Info(object):
         song_dict[index] = Song_Info(filepath);
         file_dict[index] = filepath;
 
-    def read_song(self, file_dict, index, filepath) :
+    def add_cache(self, file_dict, index, filepath) :
         file_dict[index] = filepath;
 
     def check_song_exists(self,song_dict,filepath):
@@ -59,6 +59,10 @@ class Song_Info(object) :
         self.year = self.try_get_key(audio, 'TDRC')
         self.length = audio.info.length;
         self.like = 0;
+        self.rep_dict = {}
+
+    def add_rep(self, rep_addr, rep_seq) :
+        self.rep_dict[rep_addr]= rep_seq
 
     def try_get_key(self, audio, key) :
         if key in audio.keys() :
