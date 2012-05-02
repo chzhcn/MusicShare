@@ -444,12 +444,16 @@ class EchoClient(asyncore.dispatcher):
             
     
 def main():
-    vector=VectorClock(2,1)
-    vector.init()
-    server = EchoServer(address,vector)
-    monitor=Monitor(vector)
-    #client = EchoClient('127.0.0.3', 60000)
-    asyncore.loop()
+    try:
+        vector=VectorClock(2,1)
+        vector.init()
+        server = EchoServer(address,vector)
+        monitor=Monitor(vector)
+        #client = EchoClient('127.0.0.3', 60000)
+        asyncore.loop()
+    except KeyboardInterrupt:
+        os._exit(0)
+        sys.exit()
 
         
 
