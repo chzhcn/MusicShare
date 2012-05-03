@@ -20,8 +20,8 @@ def getNetworkIp():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
     s.connect(('google.com', 0))    
     return s.getsockname()[0] 
-#address = (str(getNetworkIp()),12347)
-address = ('128.237.252.98',12347) # let the kernel give us a port
+address = (str(getNetworkIp()),12347)
+#address = ('128.237.252.98',12347) # let the kernel give us a port
 UTM=[]
 heartbeats_test={}
 v=[]

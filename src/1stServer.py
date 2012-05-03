@@ -17,7 +17,7 @@ def getNetworkIp():
     s.connect(('google.com', 0))    
     return s.getsockname()[0] 
 #1st server is updat
-address = ('128.237.252.98', 12345) # let the kernel give us a port
+address = (str(getNetworkIp()), 12345) # let the kernel give us a port
 print "Listening address is ",address
 UTM=[]
 heartbeats_test={}
