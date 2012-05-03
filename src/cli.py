@@ -7,6 +7,7 @@ Created on Mar 22, 2012
 import ast;
 import socket;
 import pickle;
+# import cPickle
 import time;
 import sys;
 import threading;
@@ -20,6 +21,7 @@ import urllib
 import re
 
 from client_info import Music_Info
+from client_info import Song_Info
 from Client_Message import Client_Message
 from Client_Message import Client_Music_Message
 from Client_Message import Client_Request_Message
@@ -33,7 +35,7 @@ def getNetworkIp():
         return s.getsockname()[0] 
 
 #Primary Server
-CS_Primary_Request_IP = str(getNetworkIp()); CS_Primary_Request_Port = 12345;
+CS_Primary_Request_IP = '128.237.252.98'; CS_Primary_Request_Port = 12345;
 #Secondary Server
 CS_Backup_Request_IP = CS_Primary_Request_IP; CS_Backup_Request_Port = 12347;
 #HeartBeat Time
@@ -43,7 +45,7 @@ class client(object):
 
     def __init__(self, repo_path):
         
-        self.open_portforward(False)
+        self.open_portforward(True)
        
 
         self.s = None;
@@ -108,8 +110,9 @@ class client(object):
             
             #................For telling bootstrap server...................
             self.public_ip=str(self.get_real_ip())
-            self.public_map_port=50001  #remote map listen port        
+            self.public_map_port=40001  #remote map listen port        
             self.real_ip_address=(self.public_ip,self.public_map_port)
+
         
             #................For local listening...................
             self.ip=str(self.getNetworkIp()) 
@@ -361,20 +364,26 @@ class client(object):
             peer_socket, peer_address = self.listening_sock.accept()
             peer_socket.settimeout(10)
                     
-            data = peer_socket.recv(8192)
+            data = peer_socket.recv(8192 * 16)
+	    # print data;
             #message=Client_Message(None,None,None,None,None)
             peer_socket.close()
             try:
-                message = pickle.loads(data);
+		    with open('pfile', 'wb') as f :
+			    f.write(data)
+		    with open('pfile', 'rb') as f : 
+			    message = pickle.load(f)
+		    # message = pickle.loads(data);
+		    print message
+		# print message
+		    print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
             except Exception as inst:
 		    print type(inst)
 		    print inst
-		    message.m_type=None
+		    # message.m_type=None
 		    # message.sender_listening_addr=None
-		    pass
+		    continue
             
-            print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
-
             self.session_table_lock.acquire()   
             
             session_table_entry = {};       
@@ -469,9 +478,16 @@ class client(object):
             except:
                 self.is_connected=False
                 print "+++++++++++++++++++++++Connection Problem++++++++++++++++++++++"   
-            if self.is_connected: 
-                data = pickle.dumps(obj)
-                self.send_socket.sendall(data);  
+            if self.is_connected:
+		    with open('pfile', 'wb') as f:
+			    pickle.dump(obj, f)
+
+
+                # data = pickle.dumps(obj)
+		    with open('pfile', 'rb') as f:
+			    self.send_socket.sendall(f.read());  
+			    
+
         except Exception as inst:
             print type(inst)
             print inst
@@ -519,6 +535,7 @@ class client(object):
         self.logical_clk_time += 1
         try :
             self.music_info_lock.acquire()
+	    # self.music_info = {1: '2'}
             self.send_obj(address, Client_Music_Message(m_type, self.real_ip_address, self.username, self.app_start_time, self.logical_clk_time, self.music_info))
         except Exception as inst:
             print type(inst)
