@@ -759,7 +759,6 @@ class client(object):
 
             elif command[0]=='remove':
                 self.remove_song(command[1])
-
             elif command[0] == 'dump' :
                 self.dump_table()
                 
