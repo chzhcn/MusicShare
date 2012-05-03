@@ -34,7 +34,8 @@ class Player():
         self.is_paused=False
         self.is_sending=False
         self.sender_instance_list={}
-        self.filepipeline = gst.Pipeline("fileserver")
+        # self.filepipeline = gst.Pipeline("fileserver")
+        self.is_playing_locally=False
         pass
     def receiver_init(self,ip,port,song_seq_num, owner_key, owner_song_seq_num):
         
@@ -104,7 +105,7 @@ class Player():
             self.filepipeline.set_state(gst.STATE_NULL)
             self.is_playing = False
             self.evt_loop.quit()
-            print "\n Unable to play audio. Error: ", message.parse_error()
+            #print "\n Unable to play audio. Error: ", message.parse_error()
         elif msgType == gst.MESSAGE_EOS:
             self.evt_loop.quit()
             self.pipeline.set_state(gst.STATE_NULL)
@@ -211,6 +212,7 @@ class Player():
         self.pipeline.set_state(gst.STATE_PLAYING)
         print "Play the song locally" 
         self.is_playing=True
+        self.is_playing_locally=True
         self.thread_song_play=threading.Thread(target=self.song_loop)
         self.thread_song_play.start()   
                     
@@ -224,9 +226,13 @@ class Player():
             self.is_playing = False
             self.is_paused = False
             self.pipeline.set_state(gst.STATE_NULL)
-            self.filepipeline.set_state(gst.STATE_NULL)
+
+            if self.is_playing_locally: 
+                self.is_playing_locally=False
+            else:
+                self.filepipeline.set_state(gst.STATE_NULL)
             self.evt_loop.quit()
-        
+
     def pause(self):
         if self.is_playing == True :
             self.pipeline.set_state(gst.STATE_PAUSED)
@@ -332,7 +338,7 @@ class Sender():
         #print "msg is forever",msgType
         if msgType == gst.MESSAGE_ERROR:
             self.sender_pipeline.set_state(gst.STATE_NULL)
-            print "\n Unable to send audio for streaming. Error: ", message.parse_error()
+            #print "\n Unable to send audio for streaming. Error: ", message.parse_error()
         elif msgType == gst.MESSAGE_EOS:
             self.sender_pipeline.set_state(gst.STATE_NULL)
             self.sender_evt_loop.quit()
@@ -341,7 +347,7 @@ class Sender():
         #print "msg is forever",msgType
         if msgType == gst.MESSAGE_ERROR:
             self.filesink_pipeline.set_state(gst.STATE_NULL)
-            print "\n Unable to send audio for streaming. Error: ", message.parse_error()
+            #print "\n Unable to send audio for streaming. Error: ", message.parse_error()
         elif msgType == gst.MESSAGE_EOS:
             print "Eos of the filesink"
             self.filesink_pipeline.set_state(gst.STATE_NULL)
