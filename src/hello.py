@@ -10,7 +10,7 @@ c = None
 
 def template(top="False",sorted_list=[]) :
     # return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr,sorted_list=sorted_list,top_ten=top, is_paused = c.player.is_paused)
-    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.real_ip_addr,sorted_list=sorted_list,top_ten=top, is_paused = c.player.is_paused)
+    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.real_ip_address,sorted_list=sorted_list,top_ten=top, is_paused = c.player.is_paused)
 
 
 
