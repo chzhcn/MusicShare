@@ -21,8 +21,8 @@ def getNetworkIp():
     s.connect(('google.com', 0))    
     return s.getsockname()[0] 
 
-#address = (str(getNetworkIp()), 12345) # let the kernel give us a port
-address = ('127.0.0.1', 12345)
+address = (str(getNetworkIp()), 12345) # let the kernel give us a port
+#address = ('127.0.0.1', 12345)
 
 UTM=[]
 heartbeats_test={}
@@ -488,14 +488,18 @@ class EchoClient(asyncore.dispatcher):
             
     
 def main():
-    vector=VectorClock(2,0)
-    vector.init()
-    client = EchoClient(vector,address)
-
-    server = EchoServer(address,vector,client)
-    monitor=Monitor(vector,client)
+    try:
+        vector=VectorClock(2,0)
+        vector.init()
+        client = EchoClient(vector,address)
     
-    asyncore.loop()
+        server = EchoServer(address,vector,client)
+        monitor=Monitor(vector,client)
+        
+        asyncore.loop()
+    except KeyboardInterrupt:
+        os._exit(0)
+        sys.exit()
 
         
 

@@ -25,11 +25,15 @@ from Caching import Caching
 
 
 class Player():
-    def __init__(self):
+    def __init__(self,client):
+        self.client=client
         self.cache_dic={}
         self.cache=Caching()
         self.cache_filepath=''
         self.is_playing=False
+        self.is_sending=False
+        self.sender_instance_list={}
+        self.is_playing_locally=False
         pass
     def receiver_init(self,ip,port,song_seq_num):
         
@@ -77,6 +81,7 @@ class Player():
         self.bus.add_signal_watch()
         self.bus.connect("message", self.message_handler)
         
+        print "I am prepare to play"
         thread.start_new_thread(self.song_loop, ())
 #        self.thread_song_play=threading.Thread(target=self.song_loop)
 #        self.thread_song_play.start()
@@ -98,7 +103,7 @@ class Player():
             self.filepipeline.set_state(gst.STATE_NULL)
             self.is_playing = False
             self.evt_loop.quit()
-            print "\n Unable to play audio. Error: ", message.parse_error()
+            #print "\n Unable to play audio. Error: ", message.parse_error()
         elif msgType == gst.MESSAGE_EOS:
             self.evt_loop.quit()
             self.pipeline.set_state(gst.STATE_NULL)
@@ -109,53 +114,7 @@ class Player():
 #        elif msgType == gst.MESSAGE_STATE_CHANGED:
 #                oldstate, newstate, pending = message.parse_state_changed()             
 #                print("MESSAGE_STATE_CHANGED: %s --> %s" % (oldstate.value_nick, newstate.value_nick))
-                
-
-    def sender_init(self,ip,port,filepath):
-
-        
-        self.sender_pipeline = gst.Pipeline("client")
-        self.src = gst.element_factory_make("filesrc", "source")
-        self.src.set_property("location", filepath)
-        self.sender_pipeline.add(self.src)
-        self.client = gst.element_factory_make("tcpclientsink", "client")
-        self.sender_pipeline.add(self.client)
-        self.client.set_property("host", str(ip))
-        self.client.set_property("port", int(port)+10)
-        self.src.link(self.client)
-        
-        self.pipeline1 = gst.Pipeline("fileclient")
-        self.src1 = gst.element_factory_make("filesrc", "source1")
-        self.src1.set_property("location", filepath)
-        self.pipeline1.add(self.src1)
-        self.client1 = gst.element_factory_make("tcpclientsink", "client1")
-        self.pipeline1.add(self.client1)
-        self.client1.set_property("host", str(ip))
-        self.client1.set_property("port", int(port)+11)
-        self.src1.link(self.client1)
-        print "send filesink address is ",str(ip),':',int(port)+11
-        
-        bus = self.sender_pipeline.get_bus()
-        bus.add_signal_watch()
-        bus.connect("message", self.sender_message_handler)
-
-        
-        time.sleep(1)
-        self.sender_pipeline.set_state(gst.STATE_PLAYING)   
-        self.pipeline1.set_state(gst.STATE_PLAYING)
-        thread.start_new_thread(self.song_loop, ())
-        
-    def sender_message_handler(self, bus, message):
-        msgType = message.type
-        #print "msg is forever",msgType
-        if msgType == gst.MESSAGE_ERROR:
-            self.sender_pipeline.set_state(gst.STATE_NULL)
-            print "\n Unable to send audio for streaming. Error: ", message.parse_error()
-        elif msgType == gst.MESSAGE_EOS:
-            self.sender_pipeline.set_state(gst.STATE_NULL)
-            self.evt_loop.quit()
-        
-        
+                      
 
     def check_cache_dic(self,song_num):
         if song_num in self.cache_dic.keys():
@@ -215,7 +174,7 @@ class Player():
             else:
                 pass
             
-            if self.file_stream:
+            if self.file_stream and os.path.isfile(filepath):
                  #............For temp file...............
                 temp_filepath=self.cache.temp_file(filepath)
                 self.file_stream=False
@@ -236,6 +195,11 @@ class Player():
 #                break          
                 #decrypt_file(key,en_filepath)
                 #print "dencryption is finished"
+    def sender_init(self,ip,port,filepath):
+        if port not in self.sender_instance_list.keys():
+            self.sender_instance_list[port]=Sender(ip,port,filepath)
+        else:
+            self.sender_instance_list[port].sender_init(ip,port,filepath)
 
            
             
@@ -245,6 +209,7 @@ class Player():
         self.pipeline.set_state(gst.STATE_PLAYING)
         print "Play the song locally" 
         self.is_playing=True
+        self.is_playing_locally=True
         self.thread_song_play=threading.Thread(target=self.song_loop)
         self.thread_song_play.start()   
                     
@@ -253,6 +218,10 @@ class Player():
            
     def stop(self):
         self.pipeline.set_state(gst.STATE_NULL)
+        if self.is_playing_locally: 
+            self.is_playing_locally=False
+        else:
+            self.filepipeline.set_state(gst.STATE_NULL)
         self.evt_loop.quit()
         
     def pause(self):
@@ -292,9 +261,117 @@ class Player():
         taglist = msg.parse_tag()
         print 'on_tag:'
         for key in taglist.keys():
-            print '\t%s = %s' % (key, taglist[key])     
+            print '\t%s = %s' % (key, taglist[key])    
+class Sender():
+    def __init__(self,ip,port,filepath):
+        print "message is send to sender"
+        self.port_list=[]
+        self.sender_init(ip, port, filepath)
+        self.client1='haha'
+        pass
+    def sender_init(self,ip,port,filepath):
+                
+        print "I want to send something"
+        
+        print "self.port_list",self.port_list
+        if port in self.port_list:
+            self.port_list.remove(port)
+            print "self.port_list after remove",self.port_list 
+            self.check_sending()  
+        
+        self.sender_pipeline = gst.Pipeline("client")
+        self.src = gst.element_factory_make("filesrc", "source")
+        self.src.set_property("location", filepath)
+        self.sender_pipeline.add(self.src)
+        self.client = gst.element_factory_make("tcpclientsink", "client")
+        self.sender_pipeline.add(self.client)
+        self.client.set_property("host", str(ip))
+        self.client.set_property("port", int(port)+10)
+        self.src.link(self.client)
+        
+        self.filesink_pipeline = gst.Pipeline("fileclient")
+        self.filesink_src = gst.element_factory_make("filesrc", "source1")
+        self.filesink_src.set_property("location", filepath)
+        self.filesink_pipeline.add(self.filesink_src)
+        self.filesink_client = gst.element_factory_make("tcpclientsink", "client1")
+        self.filesink_pipeline.add(self.filesink_client)
+        self.filesink_client.set_property("host", str(ip))
+        self.filesink_client.set_property("port", int(port)+11)
+        self.filesink_src.link(self.filesink_client)
+        print "send filesink address is ",str(ip),':',int(port)+11
+        
+        bus = self.sender_pipeline.get_bus()
+        bus.add_signal_watch()
+        bus.connect("message", self.sender_message_handler)
+        
+#        filesink_bus = self.filesink_pipeline.get_bus()
+#        filesink_bus.add_signal_watch()
+#        filesink_bus.connect("message", self.filesink_message_handler)
+        
+        self.port_list.append(port)
+        print "self.port_list after add",self.port_list
+         
+        print "I am beginning to send now"
+        time.sleep(1)
+        
+        self.sender_pipeline.set_state(gst.STATE_PLAYING) 
+        self.filesink_pipeline.set_state(gst.STATE_PLAYING)
+        #print self.sender_pipeline.get_state();
+        self.is_sending=True
+        thread.start_new_thread(self.sender_song_loop, ())
+        #thread.start_new_thread(self.filesink_song_loop, ())
+        
+    def sender_message_handler(self, bus, message):
+        msgType = message.type
+        #print "msg is forever",msgType
+        if msgType == gst.MESSAGE_ERROR:
+            self.sender_pipeline.set_state(gst.STATE_NULL)
+            #print "\n Unable to send audio for streaming. Error: ", message.parse_error()
+        elif msgType == gst.MESSAGE_EOS:
+            self.sender_pipeline.set_state(gst.STATE_NULL)
+            self.sender_evt_loop.quit()
+    def filesink_message_handler(self, bus, message):
+        msgType = message.type
+        #print "msg is forever",msgType
+        if msgType == gst.MESSAGE_ERROR:
+            self.filesink_pipeline.set_state(gst.STATE_NULL)
+            #print "\n Unable to send audio for streaming. Error: ", message.parse_error()
+        elif msgType == gst.MESSAGE_EOS:
+            print "Eos of the filesink"
+            self.filesink_pipeline.set_state(gst.STATE_NULL)
+            self.filesink_evt_loop.quit()
             
-
+    def stop_send(self):
+        print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!step3"
+        self.sender_pipeline.set_state(gst.STATE_NULL)
+        print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!step4"
+        self.filesink_pipeline.set_state(gst.STATE_NULL)
+        print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!step5"
+        print "++++++++++++++Pipeline has been set to null "
+        self.sender_evt_loop.quit()
+        #self.filesink_evt_loop.quit()
+        self.is_sending=False
+        print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!step6"
+        print "-----------------loop is closed now"
+        
+    def check_sending(self):
+        print "++++++++++self.is_sending",self.is_sending
+        if self.is_sending:
+            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!step1"
+            
+            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!step2"
+            self.stop_send()
+            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!step7"
+            print "I finished the stop_send "
+        else:
+            print "+++++++++++++++=You pass the check"
+    def sender_song_loop(self): 
+            self.sender_evt_loop = gobject.MainLoop()
+            self.sender_evt_loop.run()
+    def filesink_song_loop(self): 
+            self.filesink_evt_loop = gobject.MainLoop()
+            self.filesink_evt_loop.run()
+           
 
 
 

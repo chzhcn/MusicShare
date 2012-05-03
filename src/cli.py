@@ -15,6 +15,8 @@ import shutil
 import os
 import operator
 
+import urllib 
+import re
 
 from client_info import Music_Info
 from Client_Message import Client_Message
@@ -24,17 +26,26 @@ from Client_Message import Client_Request_Message
 from Caching import Caching
 from Player import Player
 
+def getNetworkIp():   
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
+        s.connect(('google.com', 0))    
+        return s.getsockname()[0] 
+
 #Primary Server
-CS_Primary_Request_IP = '127.0.0.1'; CS_Primary_Request_Port = 12345;
+CS_Primary_Request_IP = str(getNetworkIp()); CS_Primary_Request_Port = 12345;
 #Secondary Server
-CS_Backup_Request_IP = '127.0.0.1'; CS_Backup_Request_Port = 12347;
+CS_Backup_Request_IP = CS_Primary_Request_IP; CS_Backup_Request_Port = 12347;
 #HeartBeat Time
 BEAT_PERIOD=15;CHECK_TIMEOUT=30
 
 class client(object):
 
     def __init__(self):
+        
+        self.open_portforward(False)
+       
         self.s = None;
+        self.is_connected=False
         self.send_socket = None;
 
         self.repo_path = "songs/"
@@ -66,8 +77,8 @@ class client(object):
         self.received_hb={}
         
         self.connect_server()
-        self.open_listener()
-        self.open_stream_port()
+
+
         
         self.thread_client_receive = threading.Thread(target=self.receive_client)
         self.thread_client_receive.start()
@@ -87,12 +98,51 @@ class client(object):
         self.thread_client_liveness = threading.Thread(target=self.client_liveness_check)
         self.thread_client_liveness.start()
         
-        self.player=Player()
+        self.player=Player(self,)
+    def open_portforward(self,value):
+        if value:
+            
+            self.unified_port=False
+            
+            #................For telling bootstrap server...................
+            self.public_ip=str(self.get_real_ip())
+            self.public_map_port=50001  #remote map listen port        
+            self.real_ip_address=(self.public_ip,self.public_map_port)
+        
+            #................For local listening...................
+            self.ip=str(self.getNetworkIp()) 
+            self.port=self.public_map_port    #local listen port
+            self.listening_addr=(self.ip,self.port)
+            
+            #................For test in local Lan, if self.unified_port=True,it can be tested in Lan,otherwise it must be tested in WAN
+            if self.unified_port:
+                self.public_ip=self.ip
+                self.public_map_port=self.port
+                self.real_ip_address=self.listening_addr
+            self.open_listener()
+        else:
+            
+            self.open_local_listener()
+            
+            self.ip=self.listening_addr[0]
+            self.port=self.listening_addr[1]     #local listen port
+            
+            self.public_ip=self.ip
+            self.public_map_port=self.port
+            self.real_ip_address=self.listening_addr
         
     def getNetworkIp(self):   
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
         s.connect(('google.com', 0))    
         return s.getsockname()[0] 
+
+    def get_real_ip(self):
+#        group = re.compile(u'(?P<ip>\d+\.\d+\.\d+\.\d+)').search(urllib.URLopener().open('http://jsonip.com/').read()).groupdict() 
+#        return group['ip'] 
+         ip = urllib.urlopen('http://ip.42.pl/raw').read() 
+         print ip
+         return ip
+        
 
     def connect_server(self):
         # Try Primary Server
@@ -237,7 +287,8 @@ class client(object):
 
     def init_username(self):
         addr=self.listening_addr;
-        message=('CHB', addr[0], addr[1], self.username)
+
+        message=('CHB', self.public_ip, self.public_map_port, self.username)
         try :
             self.s.sendall(str(message))
         except Exception as inst :
@@ -277,7 +328,7 @@ class client(object):
                         key = (ut_item[0], int(ut_item[1]))
                     
                         self.session_table[key] = {'username' : ut_item[2], 'app_start_time' : None, 'logical_clk_time' : None, 'last_recv_time' : time.time()}
-                        if key == self.listening_addr :
+                        if key == self.real_ip_address :
                             self.music_table[key] = self.music_info
                             self.session_table[key]['app_start_time'] = self.app_start_time
 
@@ -309,11 +360,13 @@ class client(object):
             peer_socket.settimeout(10)
                     
             data = peer_socket.recv(8192)
-            
+            #message=Client_Message(None,None,None,None,None)
             peer_socket.close()
             try:
                 message = pickle.loads(data);
             except:
+                message.m_type=None
+                message.sender_listening_addr=None      
                 pass
             
             print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
@@ -375,13 +428,10 @@ class client(object):
 
         if song_local_seq in self.file_table.keys() :
             song_local_path = self.file_table[song_local_seq]
-            requester_ip = message.sender_listening_addr[0]
-            requester_stream_port = message.streaming_port
             print "-----------------------------Stream Info-------------------------------"
             print "request song_num :",song_local_seq
             print "request song path :",song_local_path
-            #print requester_stream_port
-            print "send stream to ip :",requester_ip
+            print "send stream to ip :",message.sender_listening_addr[0]
             print "send stream to port :", message.sender_listening_addr[1]
             self.player.sender_init(message.sender_listening_addr[0],message.sender_listening_addr[1],song_local_path)
         else :
@@ -392,15 +442,29 @@ class client(object):
             
     def dump_table(self):
         print 'dump tables: '
-        print self.music_table
+        print '..............................Remote songs...........................'
+        for key in self.music_table.keys():
+            print "..............." ,key
+            for i in self.music_table[key].keys():
+                print i,":",self.music_table[key][i],'\n'            
         # print self.session_table
-        print self.file_table
+        print '..............................Local Songs...........................'
+        for key in self.file_table:
+            print key,":",self.file_table[key],'\n'
+        print "..............................Music INfo............................"
+        print self.music_info
  
     def send_obj(self, addr, obj):  
         try :
-            self.send_socket = socket.create_connection(addr, 10)    
-            data = pickle.dumps(obj)
-            self.send_socket.send(data); 
+            try:
+                self.send_socket = socket.create_connection(addr, 10)
+                self.is_connected=True
+            except:
+                self.is_connected=False
+                print "+++++++++++++++++++++++Connection Problem++++++++++++++++++++++"   
+            if self.is_connected: 
+                data = pickle.dumps(obj)
+                self.send_socket.sendall(data);  
         except Exception as inst:
             print type(inst)
             print inst
@@ -412,7 +476,8 @@ class client(object):
         self.logical_clk_time += 1
         try :
             self.music_info_lock.acquire()
-            self.send_obj(receiver_key, Client_Request_Message(request_type, self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.session_table[receiver_key]['app_start_time'], song_seq_num, self.streaming_addr[1]))
+            self.streaming_addr=receiver_key
+            self.send_obj(receiver_key, Client_Request_Message(request_type, self.real_ip_address, self.username, self.app_start_time, self.logical_clk_time, self.session_table[receiver_key]['app_start_time'], song_seq_num, self.streaming_addr[1]))
         except Exception as inst:
             print type(inst)
             print inst
@@ -424,19 +489,13 @@ class client(object):
     def send_like(self, receiver_key, song_seq_num):
         self.send_request('LIKE', receiver_key, song_seq_num)
 
-    def try_stream(self, receiver_key, song_seq_num) :
-        if self.listening_addr != receiver_key :
-            self.send_stream(receiver_key, song_seq_num)
-        elif song_seq_num in self.file_table.keys():
-            self.player.play(self.file_table[song_seq_num])
-
     def send_stream(self, receiver_key, song_seq_num):
         self.send_request('STREAM', receiver_key, song_seq_num)
         
         self.stream_ip=receiver_key[0];
         self.stream_port=int(receiver_key[1]);
         self.stream_song_num=int(song_seq_num)     
-        self.ip=self.getNetworkIp()  
+ 
         
         #print "self.stream_ip",self.stream_ip
         #print "self.stream_port",self.stream_port
@@ -453,7 +512,7 @@ class client(object):
         self.logical_clk_time += 1
         try :
             self.music_info_lock.acquire()
-            self.send_obj(address, Client_Music_Message(m_type, self.listening_addr, self.username, self.app_start_time, self.logical_clk_time, self.music_info))
+            self.send_obj(address, Client_Music_Message(m_type, self.real_ip_address, self.username, self.app_start_time, self.logical_clk_time, self.music_info))
         except Exception as inst:
             print type(inst)
             print inst
@@ -467,7 +526,7 @@ class client(object):
         self.session_table_lock.acquire()
         for k in self.session_table.keys() :
             # print (k, v)
-            if k != self.listening_addr :
+            if k != self.real_ip_address and k!=0 and k!=None :
                 self.send_C_Music(k, m_type)
         self.session_table_lock.release() 
                 
@@ -488,7 +547,7 @@ class client(object):
             time.sleep(15)
             self.session_table_lock.acquire()
             for k in self.session_table.keys() :
-                if k != self.listening_addr :
+                if k != self.real_ip_address :
                     if(time.time() - self.session_table[k]['last_recv_time'] > liveness_threshold):
                         self.remove_lost_client(k)
             self.session_table_lock.release()
@@ -503,25 +562,49 @@ class client(object):
 
     def remove_music_table(self, key):
         self.music_table_lock.acquire()
-        if key in self.music_table.keys() :
+        if key in self.music_table.keys():
             del self.music_table[key]
         self.music_table_lock.release()
+    def close_listen_port(self,port):
+        while True:
+            try:
+                command1="netstat -nltp |grep %s" % port
+                a=os.popen(command1).read()
+                if len(a)!=0:
+                    try:
+                        command1="kill -9 $(netstat -tlnp|grep %s | awk \'{ print $7 }\' |awk -F \'/\' \'{print $1 }\')" % port
+                        os.system(command1)
+                    except:
+                        pass
+                else:
+                    break
+            except:
+                pass
+            
 
     def open_listener(self):
+        self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)        
+#        self.close_listen_port(self.port)
+#        self.close_listen_port(int(self.port+11))
+#        self.close_listen_port(int(self.port+12))
+        print "self.listening_addr ",self.listening_addr
+        try:    
+            self.listening_sock.bind(self.listening_addr)
+        except:
+            pass
+            #self.listening_sock.bind(self.listening_addr)
+            
+        self.listening_sock.listen(5)
+        
+    def open_local_listener(self):
         self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
+        self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
         self.listening_addr = (str(self.getNetworkIp()), 0)       
         self.listening_sock.bind(self.listening_addr)
         self.listening_addr = self.listening_sock.getsockname()
-        self.port=self.listening_addr[1]
         self.listening_sock.listen(5)
-
-    def open_stream_port(self):
-        self.streaming_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.streaming_addr = (socket.gethostbyname(socket.gethostname()), 0)
-        self.streaming_sock.bind(self.streaming_addr)
-        self.streaming_addr = self.streaming_sock.getsockname()
-        self.streaming_sock.listen(5)
+        return self.listening_addr
+    
 
     def add_song(self,filepath):
         repo_path = os.path.abspath(self.repo_path) # FIXME: path should be changed later
@@ -585,8 +668,14 @@ class client(object):
             elif command[0] == 'like' :
                 self.send_like((command[1], int(command[2])), int(command[3]))
 
-            elif command[0] == 'stream' :
-                self.try_stream((command[1], int(command[2])), int(command[3]))
+            elif command[0] == 'stream' :       
+                if self.player.is_playing:
+                    print "It is playing now"
+                    self.player.pause() 
+                    self.player.stop() 
+                else:
+                    print "I am lucky"
+                self.send_stream((command[1], int(command[2])), int(command[3]))
 
             elif command[0] == 'add':
                 self.add_song(command[1])
@@ -609,11 +698,21 @@ class client(object):
                 if not self.player.check_cache_dic(self.stream_song_num):
                     self.send_stream((self.stream_ip,self.stream_port),self.stream_song_num)
             elif command[0]=='play':
+                song_playing_flag=False
                 song_num=int(command[1])
                 for key in self.file_table.keys():
                     if key==song_num:
                         songpath=self.file_table[key]
-                        self.player.play(songpath)                           
+                        self.player.play(songpath)
+                        song_playing_flag=True
+                  
+                if song_playing_flag==False:
+                    cachepath=self.player.traverse_cache_dic(song_num)
+                    if len(cachepath)!=0:
+                        self.player.play(cachepath)
+                    else:
+                        print "Sorry there is no that song in the repo"
+                                              
             else :
                 print "command not recognized"
 
