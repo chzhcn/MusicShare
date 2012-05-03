@@ -52,11 +52,11 @@ class Song_Info(object) :
         # print filepath
         audio = MP3(filepath)
         self.fname = filepath
-        self.title = self.try_get_key(audio, 'TIT2')
-        self.artist = self.try_get_key(audio, 'TPE1')
-        self.album = self.try_get_key(audio, 'TALB')
-        self.mtype = self.try_get_key(audio, 'TCON')
-        self.year = self.try_get_key(audio, 'TDRC')
+        self.title = str(self.try_get_key(audio, 'TIT2'))
+        self.artist = str(self.try_get_key(audio, 'TPE1'))
+        self.album = str(self.try_get_key(audio, 'TALB'))
+        self.mtype = str(self.try_get_key(audio, 'TCON'))
+        self.year = str(self.try_get_key(audio, 'TDRC'))
         self.length = audio.info.length;
         self.like = 0;
         self.rep_dict = {}
@@ -71,4 +71,5 @@ class Song_Info(object) :
             return None;
         
     def __repr__(self) :
-        return str((self.title, self.like, self.rep_dict))
+        return str((self.title, self.rep_dict))
+        # return str((type(self.title), type(self.artist), type(self.album), type(self.mtype), type(self.year), type(self.like), type(self.rep_dict)))

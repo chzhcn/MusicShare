@@ -26,6 +26,8 @@ from Client_Message import Client_Message
 from Client_Message import Client_Music_Message
 from Client_Message import Client_Request_Message
 
+from mutagen.mp3 import MP3
+
 from Caching import Caching
 from Player import Player
 
@@ -369,11 +371,11 @@ class client(object):
             #message=Client_Message(None,None,None,None,None)
             peer_socket.close()
             try:
-		    with open('pfile', 'wb') as f :
-			    f.write(data)
-		    with open('pfile', 'rb') as f : 
-			    message = pickle.load(f)
-		    # message = pickle.loads(data);
+		    # with open('pfile', 'wb') as f :
+		    # 	    f.write(data)
+		    # with open('pfile', 'rb') as f : 
+		    # 	    message = pickle.load(f)
+		    message = pickle.loads(data);
 		    print message
 		# print message
 		    print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
@@ -479,13 +481,13 @@ class client(object):
                 self.is_connected=False
                 print "+++++++++++++++++++++++Connection Problem++++++++++++++++++++++"   
             if self.is_connected:
-		    with open('pfile', 'wb') as f:
-			    pickle.dump(obj, f)
+		    # with open('pfile', 'wb') as f:
+		    # 	    pickle.dump(obj, f)
 
 
-                # data = pickle.dumps(obj)
-		    with open('pfile', 'rb') as f:
-			    self.send_socket.sendall(f.read());  
+                data = pickle.dumps(obj)
+		    # with open('pfile', 'rb') as f:
+		    # 	    self.send_socket.sendall(f.read());  
 			    
 
         except Exception as inst:
@@ -811,8 +813,9 @@ class client(object):
                 print "command not recognized"
 
 def main() :
-    c = client();
-    c.run();
+	repo_path = sys.argv[1]
+	c = client(repo_path)
+	c.run();
 
 if __name__ == '__main__':
     main()

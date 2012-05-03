@@ -1,13 +1,13 @@
-import cpickle
+import pickle
 import myclass
 import socket
 
 
 if __name__ == '__main__' :
-    obj = myclass()
+    obj = myclass.myclass()
 
     with open('pfile', 'wb') as f:
-        cpickle.dump(obj, f)
+        pickle.dump(obj, f)
 
     address = ('128.237.120.95', 30001)
     s = socket.create_connection(address)
