@@ -370,7 +370,7 @@ class client(object):
 		    print type(inst)
 		    print inst
 		    message.m_type=None
-		    message.sender_listening_addr=None
+		    # message.sender_listening_addr=None
 		    pass
             
             print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
