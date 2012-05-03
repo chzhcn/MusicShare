@@ -101,7 +101,7 @@ class client(object):
     def open_portforward(self,value):
         if value:
             
-            self.unified_port=True
+            self.unified_port=False
             
             #................For telling bootstrap server...................
             self.public_ip=str(self.get_real_ip())
@@ -359,7 +359,7 @@ class client(object):
             peer_socket.settimeout(10)
                     
             data = peer_socket.recv(8192)
-            message=Client_Message(None,None,None,None,None)
+            #message=Client_Message(None,None,None,None,None)
             peer_socket.close()
             try:
                 message = pickle.loads(data);
