@@ -434,7 +434,9 @@ class client(object):
                         self.thread_stream = threading.Thread(target=self.stream_music, args=(message,))
                         self.thread_stream.start()
 		    elif message.m_type == 'REP' :
-			self.patch_music_table_rep(self.listening_addr, message.song_seq_no, message.sender_listening_addr, message.cache_seq)
+			# self.patch_music_table_rep(self.listening_addr, message.song_seq_no, message.sender_listening_addr, message.cache_seq)
+
+			self.patch_music_table_rep(self.read_ip__address, message.song_seq_no, message.sender_listening_addr, message.cache_seq)
 			self.multicast_C_Music('CCHB')
                 else :
                     print 'app_start_times don\'t match'
@@ -623,8 +625,11 @@ class client(object):
 	    print self.music_table
 	    print 'in look_up: ', self.music_table[receiver_key][song_seq_num].rep_dict
 
-	    if self.listening_addr in self.music_table[receiver_key][song_seq_num].rep_dict.keys() :
-		    local_seq = self.music_table[receiver_key][song_seq_num].rep_dict[self.listening_addr]
+	    if self.real_ip_address in self.music_table[receiver_key][song_seq_num].rep_dict.keys() :
+
+	    # if self.listening_addr in self.music_table[receiver_key][song_seq_num].rep_dict.keys() :
+		    # local_seq = self.music_table[receiver_key][song_seq_num].rep_dict[self.listening_addr]
+		    local_seq = self.music_table[receiver_key][song_seq_num].rep_dict[self.real_ip_address]
 		    print 'receiver_key: %s, song_seq_num: %s, in table with hit' % (receiver_key, song_seq_num) 
 		    no_rep = False
 	    else :
@@ -646,7 +651,9 @@ class client(object):
 		    print "It is playing now"
 		    self.player.pause()
 		    self.player.stop()
-	    if self.listening_addr == owner_key and owner_song_seq_num in self.file_table.keys():
+	    if self.real_ip_address == owner_key and owner_song_seq_num in self.file_table.keys():
+		    
+	    # if self.listening_addr == owner_key and owner_song_seq_num in self.file_table.keys():
 		    print 'playing from local repo'
 		    self.player.play(self.file_table[owner_song_seq_num])
 	    else :

@@ -9,7 +9,9 @@ app = Flask(__name__)
 c = None
 
 def template(top="False",sorted_list=[]) :
-    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr,sorted_list=sorted_list,top_ten=top, is_paused = c.player.is_paused)
+    # return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr,sorted_list=sorted_list,top_ten=top, is_paused = c.player.is_paused)
+    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.real_ip_addr,sorted_list=sorted_list,top_ten=top, is_paused = c.player.is_paused)
+
 
 
 @app.route('/')
@@ -124,7 +126,8 @@ def show_user_profile(username):
 def top10():
     sorted_list=[]
     sorted_list=c.top_ten()
-    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr,sorted_list=sorted_list,top_ten="True")
+    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.real_ip_address,sorted_list=sorted_list,top_ten="True")
+    # return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr,sorted_list=sorted_list,top_ten="True")
 
 with app.test_request_context('/hello', method='POST'):
     # now you can do something with the request until the
