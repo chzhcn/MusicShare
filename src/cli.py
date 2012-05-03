@@ -13,6 +13,7 @@ import threading;
 import select;
 import shutil
 import os
+import operator
 
 
 from client_info import Music_Info
@@ -36,7 +37,7 @@ class client(object):
         self.s = None;
         self.send_socket = None;
 
-        self.repo_path = "songs2/"
+        self.repo_path = "songs/"
         
         self.username = None;        
         self.app_start_time = time.time()
@@ -548,6 +549,19 @@ class client(object):
         #Remove song from song_dict/music_info
         self.music_info_object.remove_song(self.music_info,self.file_table,filepath)
         self.music_info_lock.release()
+    
+    def top_ten(self):
+        song_list=[]
+        print '-----------------------------------top 10--------------------------------------'
+        for user,song_info in self.music_table.items():
+    	    for seq,song in song_info.items():
+	        user_info=(user,seq)
+		song_list.append((user_info,song))
+		print 'song: ',
+		print song
+        sorted_list = sorted(song_list,key=lambda x:x[1].like,reverse=True)
+        print sorted_list
+        return sorted_list
 
     def run(self):
         

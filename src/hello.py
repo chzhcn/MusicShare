@@ -6,22 +6,30 @@ import os
 app = Flask(__name__)
 c = cli.client()
 
-def template() :
-    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr)
+def template(top="False",sorted_list=[]) :
+    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr,sorted_list=sorted_list,top_ten=top)
 
 @app.route('/')
 def index():
     return render_template('hello.html')
 
-@app.route('/like/<int:seqno>&<ip>&<int:port>')
-def like(seqno,ip,port):
+@app.route('/like/<int:seqno>&<ip>&<int:port>&<top>')
+def like(seqno,ip,port,top):
     c.send_like((ip,port),seqno)
-    return template()
+    if(top=="True"):
+	sorted_list = c.top_ten()
+    	return template(top,sorted_list)
+    else:
+        return template()
 
-@app.route('/remove/<int:seqno>')
-def remove(seqno):
+@app.route('/remove/<int:seqno>&<top>')
+def remove(seqno,top):
     c.remove_song(c.file_table[seqno])
-    return template()
+    if(top=="True"):
+	sorted_list = c.top_ten()
+    	return template(top,sorted_list)
+    else:
+        return template()
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -36,9 +44,8 @@ def login():
 
     return template()
 
-
-@app.route('/login/<receiver_ip>&<int:receiver_port>&<int:song_seq_num>', methods=['POST', 'GET'])
-def stream(receiver_ip, receiver_port, song_seq_num) :
+@app.route('/stream/<receiver_ip>&<int:receiver_port>&<int:song_seq_num>&<top>', methods=['POST', 'GET'])
+def stream(receiver_ip, receiver_port, song_seq_num,top) :
     print type(receiver_ip), type(receiver_port), type(song_seq_num)
     print receiver_ip, receiver_port, song_seq_num
     if c.player.is_playing == False :
@@ -46,8 +53,11 @@ def stream(receiver_ip, receiver_port, song_seq_num) :
         c.try_stream(recv_addr, song_seq_num)
         print 'called stream'
         # c.in_play = True
-
-    return template()
+    if(top=="True"):
+	sorted_list = c.top_ten()
+    	return template(top,sorted_list)
+    else:
+        return template()
 
 def refresh1():
     return template()
@@ -74,7 +84,14 @@ def refresh():
 def show_user_profile(username):
     # show the user profile for that user
     return '<b>Hello %s </b>' % username
-    
+
+
+@app.route('/top10')
+def top10():
+    sorted_list=[]
+    sorted_list=c.top_ten()
+    return render_template("welcome.html",name=c.username,music_table=c.music_table, listening_addr = c.listening_addr,sorted_list=sorted_list,top_ten="True")
+
 with app.test_request_context('/hello', method='POST'):
     # now you can do something with the request until the
     # end of the with block, such as basic assertions:
