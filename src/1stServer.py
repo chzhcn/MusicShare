@@ -1,7 +1,5 @@
-#-*- encoding: utf-8 -*-
 '''
 Created on Apr 11, 2012
-
 @author: Yong
 '''
 import asyncore
@@ -11,19 +9,16 @@ import time
 import ast
 import threading,sys, os, cPickle,string
 
-logging.basicConfig(level=logging.DEBUG,
-                        format='%(name)s: %(message)s',
-                        )
+logging.basicConfig(level=logging.DEBUG,format='%(name)s: %(message)s',)
 CHECK_TIMEOUT=15
-ip= socket.gethostbyname(socket.gethostname())
+
 def getNetworkIp():   
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
     s.connect(('google.com', 0))    
     return s.getsockname()[0] 
-
-address = (str(getNetworkIp()), 12345) # let the kernel give us a port
-#address = ('127.0.0.1', 12345)
-
+#1st server is updat
+address = ('128.237.252.98', 12345) # let the kernel give us a port
+print "Listening address is ",address
 UTM=[]
 heartbeats_test={}
 v=[]
@@ -60,13 +55,21 @@ class EchoServer(asyncore.dispatcher):
         self.v=v
         self.client=client
         #print "My vector from EchoServer is ",self.v.toString()
-        self.logger = logging.getLogger('1stBootServer')
+        #self.logger = logging.getLogger('EchoServer')
         asyncore.dispatcher.__init__(self)
+        self.bind_flag=False
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.bind(address)
-        self.address = self.socket.getsockname()
-        self.logger.debug('binding to %s', self.address)
-        self.listen(1)
+        try:
+            self.bind(address)
+            self.bind_flag=True
+            print "Primary Server is up"
+        except:
+            print "Address already in use,please restart it again"
+            self.close()
+        if self.bind_flag:
+            self.address = self.socket.getsockname()
+            #self.logger.debug('binding to %s', self.address)
+            self.listen(1)
         return
 
 
@@ -78,7 +81,7 @@ class EchoServer(asyncore.dispatcher):
         return
     
     def handle_close(self):
-        self.logger.debug('handle_close()')
+        #self.logger.debug('handle_close()')
         self.close()
         return
 
@@ -93,7 +96,7 @@ class EchoHandler(asyncore.dispatcher):
         self.client=client
 #        self.v=vector
 #        print "My vector from Echohandler is :", self.v.toString
-        self.logger = logging.getLogger('EchoHandler%s' % str(sock.getsockname()))
+        #self.logger = logging.getLogger('EchoHandler%s' % str(sock.getsockname()))
         asyncore.dispatcher.__init__(self, sock=sock)
         self.data_to_write = []
         self.vector=[0,0]
@@ -141,7 +144,9 @@ class EchoHandler(asyncore.dispatcher):
     def handle_expt(self):
         print "Disconned from :",self.addr
         self.close() # connection failed, shutdown
-
+    def handle_close(self):
+            self.close()
+            #self.logger.debug('handle_close()')
     def handle_read(self):
         global UTM
         global v
@@ -158,7 +163,7 @@ class EchoHandler(asyncore.dispatcher):
         except:
             print "connection lost "
             
-        print "1st received data" , data,'from address',self.addr
+        print "received data" , data,self.addr
         if data:
             try:
                                                         newdata=ast.literal_eval(data)
@@ -179,7 +184,6 @@ class EchoHandler(asyncore.dispatcher):
                                                         UTM.append(client_info)
                                                         self.lock.release()
                                                         
-                                                        print "....................the UT now is......................\n",UTM
                                                         self.v.tick()
 
                                                         if self.client.connected:                           
@@ -189,7 +193,7 @@ class EchoHandler(asyncore.dispatcher):
                                                         for y in UTM:
                                                             self.remoteUT.append((y[0],y[1],y[2]))
                   
-                                                        print ".....................%s is added into system................." % newdata[3] 
+                                                        print "%s is added into our system" % newdata[3] 
                                                         tosend=str(('UT',self.remoteUT))
                                                         self.data_to_write.append(tosend)
                                                        
@@ -252,14 +256,12 @@ class EchoHandler(asyncore.dispatcher):
             #self.logger.debug('handle_read() -> (%d) "%s"', len(data), data)
             #self.data_to_write.insert(0, data)
         
-    def handle_close(self):
-        #self.logger.debug('handle_close()')
-        self.close()
+
 
 class Monitor():
     def __init__(self,vector,client):
-        self.v=vector
         self.client=client
+        self.v=vector
         self.lock=threading.Lock()
         self.user_lost=False
         thread_ms= threading.Thread(target=self.getSilent)
@@ -309,15 +311,16 @@ class EchoClient(asyncore.dispatcher):
     """Sends messages to the server and receives responses.
     """
     
-    def __init__(self,v,address):
+    def __init__(self,v):
         global UTM
         self.chunk_size=8192
         self.message=str(('SSR',UTM))
-        self.host=address[0]
+        self.host='128.237.252.98'
         self.port=12347
         self.connection_state=False
         self.fail_num=0
         self.connection_state=False
+        
 #        self.v=VectorClock(2,0)
         self.v=v
         #print "My vector from EchoClient is ",self.v.toString()
@@ -326,7 +329,7 @@ class EchoClient(asyncore.dispatcher):
 #        self.to_send = message
         self.received_data = []
         #elf.chunk_size = chunk_size
-        self.logger = logging.getLogger('EchoClient')
+        #self.logger = logging.getLogger('EchoClient')
         self.data_to_write=[]
         
         self.hb_event=threading.Event()
@@ -368,16 +371,17 @@ class EchoClient(asyncore.dispatcher):
             time.sleep(10)
             
     def handle_connect(self):
-        print "client connected"
-        self.logger.debug('client_handle_connect()')
+        pass
+        #print "client connected"
+        #self.logger.debug('client_handle_connect()')
 
         
     
     def handle_close(self):
         if self.connected:
-            print "self.connected",self.connected
-            self.logger.debug('client_handle_close()')
-            self.logger.debug('Network Error')
+            #print "self.connected",self.connected
+            #self.logger.debug('client_handle_close()')
+            #self.logger.debug('Network Error')
             self.close()
 #            print "self.connected",self.connected
 #            self.hb_event.clear()
@@ -412,12 +416,20 @@ class EchoClient(asyncore.dispatcher):
 
     
     def handle_write(self):
+        data=''
+        sent=0
         data = self.data_to_write.pop()
-        sent = self.send(data[:self.chunk_size])
-        if sent < len(data):
-            remaining = data[sent:]
-            self.data.to_write.append(remaining)
-        self.logger.debug('handle_write() -> (%d) "%s"', sent, data[:sent])
+        try:
+            sent = self.send(data[:self.chunk_size])
+            flag_resend=True
+        except:
+            print "Update cannot send to Secondary Server now"
+            flag_resend=False
+        if flag_resend:   
+            if sent < len(data):
+                remaining = data[sent:]
+                self.data.to_write.append(remaining)
+        #self.logger.debug('handle_write() -> (%d) "%s"', sent, data[:sent])
         return
 #        if not self.writable():
 #            self.handle_close()
@@ -431,7 +443,11 @@ class EchoClient(asyncore.dispatcher):
     def handle_read(self):
         global UTM
         newdata=''
-        data = self.recv(self.chunk_size)
+        data=''
+        try:
+            data = self.recv(self.chunk_size)
+        except:
+            print "Secondary Server is down"
         if data:
             print "xreceived data" , data
             
@@ -488,18 +504,14 @@ class EchoClient(asyncore.dispatcher):
             
     
 def main():
-    try:
-        vector=VectorClock(2,0)
-        vector.init()
-        client = EchoClient(vector,address)
+    vector=VectorClock(2,0)
+    vector.init()
+    client = EchoClient(vector)
+
+    server = EchoServer(address,vector,client)
+    monitor=Monitor(vector,client)
     
-        server = EchoServer(address,vector,client)
-        monitor=Monitor(vector,client)
-        
-        asyncore.loop()
-    except KeyboardInterrupt:
-        os._exit(0)
-        sys.exit()
+    asyncore.loop()
 
         
 
