@@ -380,6 +380,7 @@ class client(object):
 		# print message
 		    print 'receive new message of type %s, from client %s' % (message.m_type, message.sender_listening_addr) 
             except Exception as inst:
+		    print 'in receive_client',
 		    print type(inst)
 		    print inst
 		    # message.m_type=None
@@ -489,7 +490,7 @@ class client(object):
 		    # with open('pfile', 'rb') as f:
 		    # 	    self.send_socket.sendall(f.read());  
 			    
-
+		self.send_socket.sendall(data);
         except Exception as inst:
             print type(inst)
             print inst
