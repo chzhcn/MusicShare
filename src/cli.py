@@ -490,6 +490,7 @@ class client(object):
 		    # with open('pfile', 'rb') as f:
 		    # 	    self.send_socket.sendall(f.read());  
 			    
+
 		self.send_socket.sendall(data);
         except Exception as inst:
             print type(inst)
