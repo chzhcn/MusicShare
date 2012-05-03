@@ -27,9 +27,11 @@ def remove(seqno):
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
+    print 'in login'
     name = None
     music_table={}
-    if request.method == 'POST':
+    print c.username
+    if request.method == 'POST' and c.username == None :
         print request.form['username']
         name = request.form['username']
         c.username = name
@@ -110,7 +112,8 @@ with app.test_request_context('/hello', method='POST'):
 
 if __name__ == '__main__':
     global c;
-    c = cli.client(sys.argv[2])
+    if c==None :
+        c = cli.client(sys.argv[2])
     port = int(sys.argv[1])
     app.debug = True
     app.run('127.0.0.1', port)

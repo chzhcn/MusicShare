@@ -612,8 +612,9 @@ class client(object):
 			    no_rep = True
 		    else :
 			    rep_items = self.music_table[receiver_key][song_seq_num].rep_dict.items()
+			    rep_items.append((receiver_key, song_seq_num))
 			    no_rep = False
-			    rep = rep_items[random.randint(0, rep_len-1)]
+			    rep = rep_items[random.randint(0, rep_len)]
 			    print 'receiver_key: %s, song_seq_num: %s, in table with multiple cache ' % (receiver_key, song_seq_num) 
 
 	    return (local_seq, no_rep, rep)
@@ -632,11 +633,11 @@ class client(object):
 			    print 'no cache; send request to owner: %s %s' % (owner_key, owner_song_seq_num)
 			    self.send_stream(owner_key, owner_song_seq_num, owner_key, owner_song_seq_num)
 		    elif rep != None :
-			    print 'multiple cache; send request to one of them: %s %s, owner: %s %s' & (rep[0], rep[1], owner_key, owner_song_seq_num)
+			    print 'multiple cache; send request to one of them: %s %s, owner: %s %s' % (rep[0], rep[1], owner_key, owner_song_seq_num)
 			    self.send_stream(rep[0], rep[1], owner_key, owner_song_seq_num)
 		    else :
 			    print 'play from local cache'
-			    self.player.play(self.file_table[loca_seq])
+			    self.player.play(self.file_table[local_seq])
 
     def open_listener(self):
         self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)        
