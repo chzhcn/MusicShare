@@ -1,71 +1,158 @@
 <!doctype html>
 <head>
 <link rel="stylesheet" type="text/css" href="../static/style.css" />
+{% if top_ten=="False" %}
 <meta http-equiv="refresh" content="{{'15;url='+url_for('login')}}" >
+{% else %}
+<meta http-equiv="refresh" content="{{'15;url='+url_for('top10')}}" > 
+{% endif %}
 <title>Hello from Music Share</title>
 </head>
-<form action="{{url_for('refresh')}}" method=post enctype="multipart/form-data">
-{% if name %}
-  <h1>Welcome {{ name }}!</h1>
-{% else %}
-  <h1>Hello World!</h1>
-{% endif %}
-<div>
-<input type="file" name="newsong">Add New Song</input>
-<input id="refresh" type="Submit" value="Add a song"/>
-<br>
-</div>
-{% if not is_paused %}
-<a href="{{url_for('pause') }}"/><img src="../static/pause2.png" height="30" width="30"/></a>
-{% else %}
-<a href="{{url_for('resume') }}"/><img src="../static/play2.png" height="30" width="30"/></a>
-{% endif %}
-<a href="{{url_for('stop') }}"/><img src="../static/stop.png" height="30" width="30"/></a>
-<table id="songs">
-<thead>
-		<th>Song Title</th>
-		<th> </th>
-		<th>Album</th>
-		<th>Artist</th>
-        <th>Duration</th>
-        <th>Year</th>
-	<th>Like</th>
-		<th>Remove</th>
-	</thead>
-{% for user,song_info in music_table.items() %}
-    {% for seq,song in song_info.items() %}
-    <tr>
-    <td>
-    {{song.title}}
-    </td>
-    <td>
-    <a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq)}}"/><img src="../static/play2.png" height="30" width="30"/></a>
-    </td>
-    <td>
-    {{song.album}}
-    </td>
-    <td>
-    {{song.artist}}
-    </td>
-    <td>
-    {{song.length/60}}
-    </td>
-    <td>
-    {{song.year}}
-    </td>
-    <td>
-    <a href="{{url_for('like',seqno=seq,ip=user[0],port=user[1])}}">
-    <img id="like" src="../static/like.jpeg" height="30" width="30" /></a>
-    </td>
-    <td>
-    <!-- {% if user == listening_addr %} -->
-    <a href="{{url_for('remove',seqno=seq)}}">
-      <img id="remove" src="../static/trash.png" height="30" width="30" />
-      <a/>
-      <!-- {% endif %} -->
-    </td>
-    </tr>
-    {% endfor %}
-{% endfor %}
-</table>
-</form>
+<body>
+<table width="100%" border="0">
+	<tr>
+		<td colspan=2 style="color:#333;height:60px;">
+			<h1>Music Share</h1>
+			<div class="user">
+				{% if name %}
+				  Welcome {{ name }}!
+				{% else %}
+				Hello !!
+				{% endif %}
+				</div>
+		</td>
+	</tr>
+	<tr>
+		<td style="color:#333;height:70px;">
+			{% if not is_paused %}
+			<a href="{{url_for('pause') }}"/><img src="../static/pause2.png" height="30" width="30"/></a>
+			{% else %}
+			<a href="{{url_for('resume') }}"/><img src="../static/play2.png" height="30" width="30"/></a>
+			{% endif %}
+			<a href="{{url_for('stop') }}"/><img src="../static/stop.png" height="30" width="30"/></a>
+		</td>
+		<td style="color:#333;height:70px;">
+			<div id="form">
+				<form action="{{url_for('refresh')}}" method=post enctype="multipart/form-data">
+					<input type="file" name="newsong"></input>
+					<input id="refresh" type="Submit" value="Add to Music Library"/>
+					<br>
+				</form>
+			</div>
+		</td>
+		<td style="color:#ffffff;height:70px;">
+			<div>
+				<input type="button" value = "Back to Main Page" onclick="document.location.href='{{url_for('login')}}'"/>
+				<input type="button" value = "Top Songs" onclick="document.location.href='{{url_for('top10')}}'"/>
+			</div>
+		</td>
+	</tr>
+	<tr>
+	<td colspan=2>
+	
+		
+		{% if top_ten=="False" %}
+		
+		{% endif %}
+		
+		<table id="songs">
+		<thead>
+				<th>Song Title</th>
+				<th> </th>
+				<th>Album</th>
+				<th>Artist</th>
+				<th>Duration</th>
+				<th>Year</th>
+			<th>Like</th>
+				<th>Remove</th>
+			</thead>
+		{% if top_ten=="False" %}
+		{% set count=0 %}
+		{% for user,song_info in music_table.items() %}
+			{% for seq,song in song_info.items() %}
+			{% set count=count+1 %}
+			{% if count%2 == 1%}
+			<tr class="odd">
+			{% else %}
+			<tr class="even">
+			{% endif %}
+			<td>
+			{{song.title}}
+			</td>
+			<td>
+			<a href="{{url_for('stream', receiver_ip = user[0], receiver_port = user[1], song_seq_num = seq,top=False)}}"><img src="../static/play2.png" height="30" width="30"/></a>
+			</td>
+			<td>
+			{{song.album}}
+			</td>
+			<td>
+			{{song.artist}}
+			</td>
+			<td>
+			{{song.length/60}}
+			</td>
+			<td>
+			{{song.year}}
+			</td>
+			<td>
+			<a href="{{url_for('like',seqno=seq,ip=user[0],port=user[1],top=False)}}">
+			<img id="like" src="../static/liket.png" height="30" width="30" /></a>
+			{{song.like}}
+			</td>
+			<td>
+			{% if user == listening_addr %}
+			<a href="{{url_for('remove',seqno=seq,top=False)}}">
+			  <img id="remove" src="../static/trash.png" height="30" width="30" />
+			  <a/>
+			{% endif %}
+			</td>
+			</tr>
+			{% endfor %}
+		{% endfor %}
+		{% else %}
+		{% set count=0 %}
+		{% for user,song in sorted_list %}
+			{% set count=count+1 %}
+			{% if count%2 == 1%}
+				<tr class="odd">
+			{% else %}
+				<tr class="even">
+			{% endif %}
+			<td>
+			{{song.title}}
+			</td>
+			<td>
+			<a href="{{url_for('stream', receiver_ip = user[0][0], receiver_port = user[0][1], song_seq_num = user[1],top=True)}}"/><img src="../static/play2.png" height="30" width="30"/></a>
+			</td>
+			<td>
+			{{song.album}}
+			</td>
+			<td>
+			{{song.artist}}
+			</td>
+			<td>
+			{{song.length/60}}
+			</td>
+			<td>
+			{{song.year}}
+			</td>
+			<td>
+			<a href="{{url_for('like',seqno=user[1],ip=user[0][0],port=user[0][1],top=True)}}">
+			<img id="like" src="../static/liket.png" height="30" width="30" /></a>
+			{{song.like}}
+			</td>
+			<td>
+			{% if user[0] == listening_addr %}
+			<a href="{{url_for('remove',seqno=user[1],top=True)}}">
+			  <img id="remove" src="../static/trash.png" height="30" width="30" />
+			  </a>
+			{% endif %}
+			</td>
+			</tr>
+			{% endfor %}
+		{% endif %}
+		</table>
+	</td>
+	</tr>
+	</table>
+</body>

@@ -14,6 +14,7 @@ import select;
 import shutil
 import os
 import random
+import operator
 
 import urllib 
 import re
@@ -697,6 +698,19 @@ class client(object):
         #Remove song from song_dict/music_info
         self.music_info_object.remove_song(self.music_info,self.file_table,filepath)
         self.music_info_lock.release()
+    
+    def top_ten(self):
+        song_list=[]
+        # print '-----------------------------------top 10--------------------------------------'
+        for user,song_info in self.music_table.items():
+    	    for seq,song in song_info.items():
+	        user_info=(user,seq)
+		song_list.append((user_info,song))
+		# print 'song: ',
+		# print song
+        sorted_list = sorted(song_list,key=lambda x:x[1].like,reverse=True)
+        # print sorted_list
+        return sorted_list
 
     def patch_music_table_rep(self, holder_key, holder_song_seq_num, rep_listening_addr, cache_seq_num) :
 	self.music_table_lock.acquire()

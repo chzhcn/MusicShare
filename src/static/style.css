@@ -1,16 +1,61 @@
-h1,div{
+.user{
+	text-align:right;
+	font-size: 16px;
+	
+}
+.form{
+	color:#333
+}
+h1{
  text-align: center;
+font-size: 40px;
+}
+div{
+text-align: center;
+}
+body{
+	background-image:url('bg4.jpg');
+	background-size:100%;
+	background-repeat:no-repeat;
 }
 #songs {
-	border: 1px solid #e3e3e3;
-	background-color: #f2f2f2;
-        width: 100%;
+	margin-left:auto;
+	margin-right:auto;
+	border: 1px solid #A3A3A3;
+        width: 90%;
+	background:transparent;
+	color:#333
+	/*background-color: #f2f2f2;*/
 	border-radius: 6px;
 	-webkit-border-radius: 6px;
 	-moz-border-radius: 6px;
 }
+tr.odd td{
+        
+	/*background-color:#ffffff;*/
+	line-height: 20px;
+	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	font-size: 14px;
+	/*color:#ffffff;*/
+	border-bottom: 1px solid #fff;
+	border-top: 1px solid #fff;
+
+}
+tr.even td{
+        
+	/*background-color:#e8e8e8;*/
+	line-height: 20px;
+	color: #ffffff
+	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	font-size: 14px;
+	
+	border-bottom: 1px solid #fff;
+	border-top: 1px solid #fff;
+
+}
 #songs td, #songs th {
 	padding: 5px;
+	/*color: #ffffff*/
 	color: #333;
 }
 #songs thead {
@@ -18,7 +63,7 @@ h1,div{
 	padding: .2em 0 .2em .5em;
 	text-align: left;
 	color: #4B4B4B;
-	background-color: #C8C8C8;
+	/*background-color: #C8C8C8;*/
 	background-image: -webkit-gradient(linear, left top, left bottom, from(#f2f2f2), to(#e3e3e3), color-stop(.6,#B3B3B3));
 	background-image: -moz-linear-gradient(top, #D6D6D6, #B0B0B0, #B3B3B3 90%);
 	border-bottom: solid 1px #999;
@@ -38,7 +83,4 @@ h1,div{
 	font-size: 14px;
 	border-bottom: 1px solid #fff;
 	border-top: 1px solid #fff;
-}
-#songs td:hover {
-	background-color: #fff;
 }
