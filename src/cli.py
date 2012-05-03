@@ -40,28 +40,16 @@ BEAT_PERIOD=15;CHECK_TIMEOUT=30
 
 class client(object):
 
-    def __init__(self, path):
-    
-        self.local_test=True
-        self.public_map_port=50001  #remote map listen port
+    def __init__(self, repo_path):
         
-        self.public_ip=str(self.get_real_ip())
-        self.real_ip_address=(self.public_ip,self.public_map_port)
-        
-        
-        self.ip=str(self.getNetworkIp()) 
-        self.port=self.public_map_port    #local listen port
-        self.listening_addr=(self.ip,self.port)
-        
-        if self.local_test:
-            self.public_ip=self.ip
-            self.public_map_port=self.port
-            self.real_ip_address=self.listening_addr
+        self.open_portforward(False)
+       
 
         self.s = None;
+        self.is_connected=False
         self.send_socket = None;
 
-        self.repo_path = path
+        self.repo_path = repo_path
         
         self.username = None;        
         self.app_start_time = time.time()
@@ -90,7 +78,7 @@ class client(object):
         self.received_hb={}
         
         self.connect_server()
-        self.open_listener()
+
 
         
         self.thread_client_receive = threading.Thread(target=self.receive_client)
@@ -112,6 +100,37 @@ class client(object):
         self.thread_client_liveness.start()
         
         self.player=Player(self,)
+    def open_portforward(self,value):
+        if value:
+            
+            self.unified_port=True
+            
+            #................For telling bootstrap server...................
+            self.public_ip=str(self.get_real_ip())
+            self.public_map_port=50001  #remote map listen port        
+            self.real_ip_address=(self.public_ip,self.public_map_port)
+        
+            #................For local listening...................
+            self.ip=str(self.getNetworkIp()) 
+            self.port=self.public_map_port    #local listen port
+            self.listening_addr=(self.ip,self.port)
+            
+            #................For test in local Lan, if self.unified_port=True,it can be tested in Lan,otherwise it must be tested in WAN
+            if self.unified_port:
+                self.public_ip=self.ip
+                self.public_map_port=self.port
+                self.real_ip_address=self.listening_addr
+            self.open_listener()
+        else:
+            
+            self.open_local_listener()
+            
+            self.ip=self.listening_addr[0]
+            self.port=self.listening_addr[1]     #local listen port
+            
+            self.public_ip=self.ip
+            self.public_map_port=self.port
+            self.real_ip_address=self.listening_addr
         
     def getNetworkIp(self):   
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)        
@@ -402,8 +421,8 @@ class client(object):
                         self.thread_stream = threading.Thread(target=self.stream_music, args=(message,))
                         self.thread_stream.start()
 		    elif message.m_type == 'REP' :
-			self.patch_music_table_rep(self.listenging_addr, message.song_seq_no, message.sender_listening_addr, message.cache_seq)
-			self.multicast_C_Music(self, 'CCHB')
+			self.patch_music_table_rep(self.listening_addr, message.song_seq_no, message.sender_listening_addr, message.cache_seq)
+			self.multicast_C_Music('CCHB')
                 else :
                     print 'app_start_times don\'t match'
                     # print message.receiver_app_start_time, self.app_start_time
@@ -443,9 +462,15 @@ class client(object):
  
     def send_obj(self, addr, obj):  
         try :
-            self.send_socket = socket.create_connection(addr, 10)    
-            data = pickle.dumps(obj)
-            self.send_socket.send(data); 
+            try:
+                self.send_socket = socket.create_connection(addr, 10)
+                self.is_connected=True
+            except:
+                self.is_connected=False
+                print "+++++++++++++++++++++++Connection Problem++++++++++++++++++++++"   
+            if self.is_connected: 
+                data = pickle.dumps(obj)
+                self.send_socket.sendall(data);  
         except Exception as inst:
             print type(inst)
             print inst
@@ -506,9 +531,8 @@ class client(object):
         print "multicasting music info to clients"
         self.session_table_lock.acquire()
         for k in self.session_table.keys() :
-            # if k != self.real_ip_address and k!=0 and k!=None :
-		    # print k
-		self.send_C_Music(k, m_type)
+		if k!=self.real_ip_address and k!=0 and k!=None :
+			self.send_C_Music(k, m_type)
 	self.session_table_lock.release()
                 
     def multicast_CCD(self):
@@ -519,7 +543,7 @@ class client(object):
         
     def period_CCHB(self):
         while True :
-            time.sleep(10)
+            time.sleep(20)
             self.multicast_CCHB()
 
     def client_liveness_check(self):
@@ -563,27 +587,36 @@ class client(object):
             except:
                 pass
 
-    def look_up_cache(receiver_key, song_seq_num):
+    def look_up_cache(self, receiver_key, song_seq_num):
 	    local_seq = -1
 	    no_rep = True
 	    rep = None
 
+	    print 'look_up_cache: receiver_key: %s, song_seq_num: %s' % (receiver_key, song_seq_num) 
+
 	    if receiver_key not in self.music_table.keys() or song_seq_num not in self.music_table[receiver_key].keys():
-		    return (local_seq, no_req, rep)
+		    print 'receiver_key: %s, song_seq_num: %s, not in table' % (receiver_key, song_seq_num) 
+		    return (local_seq, no_rep, rep)
+
+	    print self.music_table
+	    print 'in look_up: ', self.music_table[receiver_key][song_seq_num].rep_dict
 
 	    if self.listening_addr in self.music_table[receiver_key][song_seq_num].rep_dict.keys() :
-		    local_seq = self.self.music_table[receiver_key][song_seq_num].rep_dict[self.listening_addr]
+		    local_seq = self.music_table[receiver_key][song_seq_num].rep_dict[self.listening_addr]
+		    print 'receiver_key: %s, song_seq_num: %s, in table with hit' % (receiver_key, song_seq_num) 
 		    no_rep = False
 	    else :
-		    rep_len = len(self.music_table[receiver_key][song_seq_num].rep_dict.items()) == 0
+		    rep_len = len(self.music_table[receiver_key][song_seq_num].rep_dict.items())
 		    if rep_len == 0 :
+			    print 'receiver_key: %s, song_seq_num: %s, in table without cache ' % (receiver_key, song_seq_num) 
 			    no_rep = True
 		    else :
-			    rep_itmes = self.music_table[receiver_key][song_seq_num].rep_dict.items()
+			    rep_items = self.music_table[receiver_key][song_seq_num].rep_dict.items()
 			    no_rep = False
 			    rep = rep_items[random.randint(0, rep_len-1)]
+			    print 'receiver_key: %s, song_seq_num: %s, in table with multiple cache ' % (receiver_key, song_seq_num) 
 
-	    return (local_seq, no_req, rep)
+	    return (local_seq, no_rep, rep)
 
     def try_play(self, owner_key, owner_song_seq_num) :
 	    if self.player.is_playing :
@@ -594,8 +627,8 @@ class client(object):
 		    print 'playing from local repo'
 		    self.player.play(self.file_table[owner_song_seq_num])
 	    else :
-		    local_seq, no_req, rep = self.look_upcache(owner_key, owner_song_seq_num)
-		    if no_req == True :
+		    local_seq, no_rep, rep = self.look_up_cache(owner_key, owner_song_seq_num)
+		    if no_rep == True :
 			    print 'no cache; send request to owner: %s %s' % (owner_key, owner_song_seq_num)
 			    self.send_stream(owner_key, owner_song_seq_num, owner_key, owner_song_seq_num)
 		    elif rep != None :
@@ -618,7 +651,16 @@ class client(object):
             #self.listening_sock.bind(self.listening_addr)
             
         self.listening_sock.listen(5)
-
+        
+    def open_local_listener(self):
+        self.listening_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.listening_addr = (socket.gethostbyname(socket.gethostname()), 0)
+        self.listening_addr = (str(self.getNetworkIp()), 0)       
+        self.listening_sock.bind(self.listening_addr)
+        self.listening_addr = self.listening_sock.getsockname()
+        self.listening_sock.listen(5)
+        return self.listening_addr
+    
 
     def add_song(self,filepath):
         repo_path = os.path.abspath(self.repo_path) # FIXME: path should be changed later
@@ -657,8 +699,13 @@ class client(object):
 
     def patch_music_table_rep(self, holder_key, holder_song_seq_num, rep_listening_addr, cache_seq_num) :
 	self.music_table_lock.acquire()
-	if holder_key in self.music_table.keys() :
-		self.music_table[holder_key][holder_song_seq_num].add_rep(repr_listening_addr, cache_seq_num)
+	if holder_key in self.music_table.keys() and holder_song_seq_num in self.music_table[holder_key].keys() :
+		self.music_table[holder_key][holder_song_seq_num].add_rep(rep_listening_addr, cache_seq_num)
+		print 'in patch: ', self.music_table[holder_key][holder_song_seq_num].rep_dict
+		print self.music_table
+	else :
+		print 'not in table (%s, %s)' % (holder_key, holder_song_seq_num)
+	
 	self.music_table_lock.release()
 
     def run(self):

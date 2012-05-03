@@ -488,14 +488,18 @@ class EchoClient(asyncore.dispatcher):
             
     
 def main():
-    vector=VectorClock(2,0)
-    vector.init()
-    client = EchoClient(vector,address)
-
-    server = EchoServer(address,vector,client)
-    monitor=Monitor(vector,client)
+    try:
+        vector=VectorClock(2,0)
+        vector.init()
+        client = EchoClient(vector,address)
     
-    asyncore.loop()
+        server = EchoServer(address,vector,client)
+        monitor=Monitor(vector,client)
+        
+        asyncore.loop()
+    except KeyboardInterrupt:
+        os._exit(0)
+        sys.exit()
 
         
 

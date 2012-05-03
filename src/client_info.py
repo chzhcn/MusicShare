@@ -71,4 +71,4 @@ class Song_Info(object) :
             return None;
         
     def __repr__(self) :
-        return str((self.title, self.like))
+        return str((self.title, self.like, self.rep_dict))
